@@ -4,7 +4,7 @@ import 'package:graph_translator/route_unknown.dart';
 import 'package:graph_translator/transtion.dart';
 
 void main() {
-  runApp(GraphTranslator());
+  runApp(const GraphTranslator());
 }
 class GraphTranslator extends StatelessWidget {
   const GraphTranslator({Key key}) : super(key: key);
