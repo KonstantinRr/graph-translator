@@ -56,11 +56,11 @@ class GraphPainter extends CustomPainter {
     
     var nodePaint = Paint()
       ..style = PaintingStyle.fill
-      ..color = Colors.green;
+      ..color = Colors.black;
 
     var edgePaint = Paint()
       ..style = PaintingStyle.stroke
-      ..color = Colors.red;
+      ..color = Colors.black;
 
     // perform rendering
     //int count = 0;

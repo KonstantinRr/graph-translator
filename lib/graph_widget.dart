@@ -24,6 +24,9 @@ class GraphController {
   Stream<GraphControllerState> get events => _controller.stream;
   GraphControllerState get state => GraphControllerState(_graph, _translator);
 
+  GraphTranslator get translator => _translator;
+  DirectedGraph get graph => _graph;
+
   set graph(DirectedGraph graph) {
     if (_graph != graph) {
       _graph = graph;
@@ -67,14 +70,13 @@ class GraphWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.red,
       constraints: BoxConstraints.expand(),
       child: Listener(
       //onPointerDown: (event) { print('Down'); },
       //onPointerHover: (event) { print('Hover'); },
       onPointerMove: (moveEvent) {
         controller.updateViewState((view) {
-          view.applyTranslation(-moveEvent.delta);
+          view.applyTranslation(-moveEvent.delta * controller.translator.zoom);
         });
       },
       behavior: HitTestBehavior.opaque,
