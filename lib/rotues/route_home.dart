@@ -4,8 +4,8 @@
 /// Konstantin Rolf (S3750558) - k.rolf@student.rug.nl
 
 import 'package:flutter/material.dart';
-import 'package:graph_translator/graph.dart';
-import 'package:graph_translator/graph_widget.dart';
+import 'package:graph_translator/state/graph.dart';
+import 'package:graph_translator/widgets/widget_graph.dart';
 
 class RouteHome extends StatefulWidget {
   const RouteHome({Key key});

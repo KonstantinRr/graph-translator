@@ -4,18 +4,22 @@
 /// Konstantin Rolf (S3750558) - k.rolf@student.rug.nl
 
 import 'package:flutter/material.dart';
-import 'package:graph_translator/route_home.dart';
-import 'package:graph_translator/route_unknown.dart';
-import 'package:graph_translator/transtion.dart';
+import 'package:graph_translator/rotues/rotue_splash.dart';
+import 'package:graph_translator/rotues/route_home.dart';
+import 'package:graph_translator/rotues/route_unknown.dart';
+import 'package:graph_translator/util/transtion.dart';
 
 void main() {
   runApp(const GraphTranslator());
 }
+
 class GraphTranslator extends StatelessWidget {
   const GraphTranslator({Key key}) : super(key: key);
 
   Route onGenerateRotue(RouteSettings settings) {
     switch(settings.name) {
+      case 'splash': return MaterialPageRoute(
+        builder: (context) => const RouteSplash());
       case '/': return MaterialPageRoute(
         builder: (context) => const RouteHome());
     }
@@ -36,6 +40,7 @@ class GraphTranslator extends StatelessWidget {
       debugShowMaterialGrid: false,
       initialRoute: '/',
       theme: ThemeData(
+        scaffoldBackgroundColor: Color(0xfff2f2f2),
         pageTransitionsTheme: const NoTransitionsOnWeb(),
       ),
     );
