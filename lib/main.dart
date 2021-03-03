@@ -40,6 +40,9 @@ class GraphTranslator extends StatelessWidget {
       debugShowMaterialGrid: false,
       initialRoute: '/',
       theme: ThemeData(
+        sliderTheme: SliderThemeData(
+          valueIndicatorTextStyle: TextStyle(color: Colors.black)
+        ),
         scaffoldBackgroundColor: Color(0xfff2f2f2),
         pageTransitionsTheme: const NoTransitionsOnWeb(),
       ),

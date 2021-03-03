@@ -23,8 +23,8 @@ class GraphTranslator {
   }
 
   void applyTranslation(Offset offset) {
-    dx += offset.dx;
-    dy += offset.dy;
+    dx += offset.dx / zoom;
+    dy += offset.dy / zoom;
   }
 
   @override
@@ -34,7 +34,8 @@ class GraphTranslator {
 class GraphPainter extends CustomPainter {
   final GraphTranslator translator;
   final DirectedGraph graph;
-  const GraphPainter(this.graph, this.translator);
+  final bool skipInvisible;
+  const GraphPainter(this.graph, this.translator, {this.skipInvisible=false});
 
   Offset pointScale(Offset offset) {
     return Offset(
@@ -55,7 +56,7 @@ class GraphPainter extends CustomPainter {
       pointScale(Offset.zero),
       pointScale(Offset(size.width, size.height))
     );
-    const radius = 5.0;
+    var radius = 5.0 / translator.zoom;
     
     var nodePaint = Paint()
       ..style = PaintingStyle.fill
@@ -68,10 +69,14 @@ class GraphPainter extends CustomPainter {
     // perform rendering
     //int count = 0;
     for (var node in graph.nodes) {
-      var rect = Rect.fromCircle(center: node.offset, radius: radius);
-      if (rect.overlaps(renderRect)) {
+      if (skipInvisible) {
+        var rect = Rect.fromCircle(center: node.offset, radius: radius);
+        if (rect.overlaps(renderRect)) {
+          canvas.drawCircle(node.offset, radius, nodePaint);
+          //count++;
+        }
+      } else {
         canvas.drawCircle(node.offset, radius, nodePaint);
-        //count++;
       }
       // render all edges to other nodes
       for (var edge in node.outEdges) {
@@ -97,10 +102,12 @@ class GraphController {
   GraphTranslator _translator;
   StreamController<GraphControllerState> _controller;
 
+
   GraphController({DirectedGraph graph, GraphTranslator translator}) :
     _controller = StreamController.broadcast(),
     _graph = graph ?? DirectedGraph(),
-    _translator = translator ?? GraphTranslator();
+    _translator = translator ?? GraphTranslator() {
+  }
 
   Stream<GraphControllerState> get events => _controller.stream;
   GraphControllerState get state => GraphControllerState(_graph, _translator);
