@@ -4,6 +4,7 @@
 /// Konstantin Rolf (S3750558) - k.rolf@student.rug.nl
 
 import 'package:flutter/painting.dart';
+import 'package:fraction/fraction.dart';
 import 'dart:math' as math;
 
 import 'package:vector_math/vector_math.dart';
@@ -14,6 +15,7 @@ abstract class GraphInterface {
 }
 
 class Node {
+  /// Stores the coordinates 
   double x, y;
   List<Edge> outEdges, inEdges;
 
@@ -31,13 +33,10 @@ class Node {
 }
 
 class Edge {
-  final Node destination, source;
-  final Edge otherEdge;
+  Node destination, source;
+  Fraction weight;
 
-  bool get isUndirected => otherEdge == null;
-  bool get isDirected => otherEdge != null;
-
-  Edge(this.source, this.destination, this.otherEdge);
+  Edge(this.source, this.destination, this.weight);
 }
 
 class FunctionSettings {
@@ -130,26 +129,31 @@ class DirectedGraph {
       Node end = nodes[rand.nextInt(nodes.length)];
 
       if (directed)  
-        addDirectedEdge(start, end);
+        addDirectedEdge(start, end, Fraction(1));
       else
-        addUndirectedEdge(start, end);
+        addUndirectedEdge(start, end, Fraction(1));
     }
   }
 
-  bool addDirectedEdge(Node start, Node end) {
+  bool addDirectedEdge(Node start, Node end, Fraction weight, {bool replace=true}) {
     var connectingEdge = start.connectsTo(end);
     if (connectingEdge == null) {
-      var backwardEdge = end.connectsTo(start);
-      var edge = Edge(start, end, backwardEdge);
+      var edge = Edge(start, end, weight);
       start.outEdges.add(edge);
       end.inEdges.add(edge);
+      return true;
+    } else if (replace) {
+      connectingEdge.weight = weight;
+      return true;
     }
-    return connectingEdge == null;
+    return false;
   }
 
-  bool addUndirectedEdge(Node n1, Node n2) {
-    var b1 = addDirectedEdge(n1, n2);
-    var b2 = addDirectedEdge(n2, n1);
+  bool addUndirectedEdge(Node n1, Node n2, Fraction weight, {bool replace=true}) {
+    var edge1 = n1.connectsTo(n2);
+    var edge2 = n2.connectsTo(n1);
+    var b1 = addDirectedEdge(n1, n2, weight);
+    var b2 = addDirectedEdge(n2, n1, weight);
     return b1 || b2;
   }
 }

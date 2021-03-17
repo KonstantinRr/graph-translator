@@ -7,9 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:graph_translator/rotues/rotue_splash.dart';
 import 'package:graph_translator/rotues/route_home.dart';
 import 'package:graph_translator/rotues/route_unknown.dart';
+import 'package:graph_translator/state/model_degroot.dart';
+import 'package:graph_translator/util/linalg.dart';
 import 'package:graph_translator/util/transtion.dart';
 
 void main() {
+  testMatrix();
   runApp(const GraphTranslator());
 }
 
