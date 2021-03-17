@@ -7,7 +7,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:graph_translator/state/graph.dart';
+import 'package:graph_translator/state/graph_directed.dart';
 
 class GraphTranslator {
   double zoom;
@@ -15,8 +15,8 @@ class GraphTranslator {
 
   GraphTranslator({this.zoom = 1.0, this.dx = 0.0, this.dy = 0.0});
 
-  bool operator ==(o) => o is GraphTranslator &&
-    o.zoom == zoom && o.dx == dx && o.dy == dy;
+  bool operator ==(o) =>
+      o is GraphTranslator && o.zoom == zoom && o.dx == dx && o.dy == dy;
 
   void applyZoom(double azoom) {
     zoom *= azoom;
@@ -35,13 +35,11 @@ class GraphPainter extends CustomPainter {
   final GraphTranslator translator;
   final DirectedGraph graph;
   final bool skipInvisible;
-  const GraphPainter(this.graph, this.translator, {this.skipInvisible=false});
+  const GraphPainter(this.graph, this.translator, {this.skipInvisible = false});
 
   Offset pointScale(Offset offset) {
-    return Offset(
-      (offset.dx + translator.dx) * translator.zoom,
-      (offset.dy + translator.dy) * translator.zoom
-    );
+    return Offset((offset.dx + translator.dx) * translator.zoom,
+        (offset.dy + translator.dy) * translator.zoom);
   }
 
   @override
@@ -53,11 +51,9 @@ class GraphPainter extends CustomPainter {
     canvas.scale(translator.zoom);
 
     Rect renderRect = Rect.fromPoints(
-      pointScale(Offset.zero),
-      pointScale(Offset(size.width, size.height))
-    );
+        pointScale(Offset.zero), pointScale(Offset(size.width, size.height)));
     var radius = 5.0 / translator.zoom;
-    
+
     var nodePaint = Paint()
       ..style = PaintingStyle.fill
       ..color = Colors.black;
@@ -80,13 +76,12 @@ class GraphPainter extends CustomPainter {
       }
       // render all edges to other nodes
       for (var edge in node.outEdges) {
-        canvas.drawLine(edge.source.offset,
-          edge.destination.offset, edgePaint);
+        canvas.drawLine(edge.source.offset, edge.destination.offset, edgePaint);
       }
     }
     canvas.restore();
   }
-  
+
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
@@ -102,12 +97,10 @@ class GraphController {
   GraphTranslator _translator;
   StreamController<GraphControllerState> _controller;
 
-
-  GraphController({DirectedGraph graph, GraphTranslator translator}) :
-    _controller = StreamController.broadcast(),
-    _graph = graph ?? DirectedGraph(),
-    _translator = translator ?? GraphTranslator() {
-  }
+  GraphController({DirectedGraph graph, GraphTranslator translator})
+      : _controller = StreamController.broadcast(),
+        _graph = graph ?? DirectedGraph(),
+        _translator = translator ?? GraphTranslator() {}
 
   Stream<GraphControllerState> get events => _controller.stream;
   GraphControllerState get state => GraphControllerState(_graph, _translator);
@@ -129,19 +122,17 @@ class GraphController {
     }
   }
 
-  void updateGraphState(
-    void Function(DirectedGraph) func, {bool nt=true}) {
+  void updateGraphState(void Function(DirectedGraph) func, {bool nt = true}) {
     func(_graph);
     notify(nt);
   }
 
-  void updateViewState(
-    void Function(GraphTranslator) func, {bool nt=true}) {
+  void updateViewState(void Function(GraphTranslator) func, {bool nt = true}) {
     func(_translator);
     notify(nt);
   }
 
-  void notify([bool nt=true]) {
+  void notify([bool nt = true]) {
     if (nt) _controller.add(state);
   }
 
@@ -160,31 +151,32 @@ class GraphWidget extends StatelessWidget {
     return Container(
       constraints: BoxConstraints.expand(),
       child: Listener(
-      //onPointerDown: (event) { print('Down'); },
-      //onPointerHover: (event) { print('Hover'); },
-      onPointerMove: (moveEvent) {
-        controller.updateViewState((view) {
-          view.applyTranslation(-moveEvent.delta * controller.translator.zoom);
-        });
-      },
-      behavior: HitTestBehavior.opaque,
-      child: StreamBuilder<GraphControllerState>(
-        stream: controller.events,
-        initialData: controller.state,
-        builder: (context, snap) {
-          if (snap.hasError)
-            return Center(child: Text('Error'));
-          if (snap.hasData) {
-            return CustomPaint(
-              painter: GraphPainter(
-                snap.data.graph,
-                snap.data.translator,
-              ),
-            );
-          }
-          return Center(child: Text('No Data'));
-        }
-      )
-    ));
+        //onPointerDown: (event) { print('Down'); },
+        //onPointerHover: (event) { print('Hover'); },
+        onPointerMove: (moveEvent) {
+          controller.updateViewState((view) {
+            view.applyTranslation(
+                -moveEvent.delta * controller.translator.zoom);
+          });
+        },
+        behavior: HitTestBehavior.opaque,
+        child: StreamBuilder<GraphControllerState>(
+          stream: controller.events,
+          initialData: controller.state,
+          builder: (context, snap) {
+            if (snap.hasError) return Center(child: Text('Error'));
+            if (snap.hasData) {
+              return CustomPaint(
+                painter: GraphPainter(
+                  snap.data.graph,
+                  snap.data.translator,
+                ),
+              );
+            }
+            return Center(child: Text('No Data'));
+          },
+        ),
+      ),
+    );
   }
 }

@@ -13,7 +13,9 @@ class RouteSplash extends StatefulWidget {
   final String destination;
 
   const RouteSplash({
-    this.destination = '/', this.skip = true, Key key,
+    this.destination = '/',
+    this.skip = true,
+    Key key,
     this.delay = const Duration(milliseconds: 700),
   }) : super(key: key);
 
@@ -21,13 +23,12 @@ class RouteSplash extends StatefulWidget {
 }
 
 class RouteSplashState extends State<RouteSplash> {
-
   @override
   void initState() {
     super.initState();
     if (widget.skip)
-      Future.delayed(widget.delay, () =>
-        Navigator.of(context).pushReplacementNamed(widget.destination));
+      Future.delayed(widget.delay,
+          () => Navigator.of(context).pushReplacementNamed(widget.destination));
   }
 
   @override
@@ -38,18 +39,21 @@ class RouteSplashState extends State<RouteSplash> {
       builder: (context, _) => Scaffold(
         body: Stack(
           fit: StackFit.passthrough,
-          children: <Widget> [
-            Center(child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget> [
-                Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child:const WidgetLogo(size: 240, margin: const EdgeInsets.all(10.0)),
-                ),
-              ]
-            )),
-          ]
-        )
+          children: <Widget>[
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: const WidgetLogo(
+                        size: 240, margin: const EdgeInsets.all(10.0)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

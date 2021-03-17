@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:graph_translator/rotues/rotue_splash.dart';
 import 'package:graph_translator/rotues/route_home.dart';
 import 'package:graph_translator/rotues/route_unknown.dart';
-import 'package:graph_translator/state/model_degroot.dart';
+import 'package:graph_translator/state_manager.dart';
 import 'package:graph_translator/util/linalg.dart';
 import 'package:graph_translator/util/transtion.dart';
 
@@ -20,18 +20,17 @@ class GraphTranslator extends StatelessWidget {
   const GraphTranslator({Key key}) : super(key: key);
 
   Route onGenerateRotue(RouteSettings settings) {
-    switch(settings.name) {
-      case 'splash': return MaterialPageRoute(
-        builder: (context) => const RouteSplash());
-      case '/': return MaterialPageRoute(
-        builder: (context) => const RouteHome());
+    switch (settings.name) {
+      case 'splash':
+        return MaterialPageRoute(builder: (context) => const RouteSplash());
+      case '/':
+        return MaterialPageRoute(builder: (context) => const RouteHome());
     }
     return null;
   }
 
   Route onGenerateUnknownRoute(RouteSettings settings) {
-    return MaterialPageRoute(
-      builder: (context) => const RouteUnknown());
+    return MaterialPageRoute(builder: (context) => const RouteUnknown());
   }
 
   @override
@@ -42,9 +41,10 @@ class GraphTranslator extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       debugShowMaterialGrid: false,
       initialRoute: '/',
+      builder: (context, child) => StateManagerWidget(child: child),
       theme: ThemeData(
         sliderTheme: SliderThemeData(
-          valueIndicatorTextStyle: TextStyle(color: Colors.black)
+          valueIndicatorTextStyle: TextStyle(color: Colors.black),
         ),
         scaffoldBackgroundColor: Color(0xfff2f2f2),
         pageTransitionsTheme: const NoTransitionsOnWeb(),
