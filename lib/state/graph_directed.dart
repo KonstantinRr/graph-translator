@@ -8,44 +8,49 @@ import 'dart:math' as math;
 
 import 'package:graph_translator/state/graph.dart';
 
-class DirectedNode<EdgeType extends DirectedEdge> extends Component {
+class DirectedNode<EdgeType extends DirectedEdge> extends Component
+    with ComponentObject {
   /// Stores the incoming and outgoing edges
   List<EdgeType> outEdges, inEdges;
 
   DirectedNode(
       {List<EdgeType> outEdges, List<EdgeType> inEdges, double x, double y})
       : outEdges = outEdges ?? [],
-        inEdges = inEdges ?? [],
-        super(x: x, y: y);
-
+        inEdges = inEdges ?? [] {
+    setCoords(x, y);
+  }
   DirectedNode.random({List<EdgeType> outEdges, List<EdgeType> inEdges})
       : outEdges = outEdges ?? [],
-        inEdges = inEdges ?? [],
-        super.random();
+        inEdges = inEdges ?? [] {
+    randPosition();
+  }
 
   /// Returns the edge idx that connects nd to this
   int incomingEdgeIdxFrom(DirectedNode<EdgeType> nd) =>
-      inEdges.indexWhere((element) => element.source == nd);
+      inEdges.indexWhere((element) => element.p1 == nd);
 
   /// Returns the edge idx that connects this to nd
   int outgoingEdgeIdxTo(DirectedNode<EdgeType> nd) =>
-      outEdges.indexWhere((element) => element.destination == nd);
+      outEdges.indexWhere((element) => element.p2 == nd);
 
   /// Returns the edge that connects nd to this
   EdgeType incomingEdgeFrom(DirectedNode<EdgeType> nd) =>
-      inEdges.firstWhere((element) => element.source == nd, orElse: () => null);
+      inEdges.firstWhere((element) => element.p1 == nd, orElse: () => null);
 
   /// Returns the edge that connects this to nd
-  EdgeType outgoingEdgeTo(DirectedNode<EdgeType> nd) => outEdges
-      .firstWhere((element) => element.destination == nd, orElse: () => null);
+  EdgeType outgoingEdgeTo(DirectedNode<EdgeType> nd) =>
+      outEdges.firstWhere((element) => element.p2 == nd, orElse: () => null);
+
+  @override
+  void read(Map<String, dynamic> map) {}
+
+  @override
+  Map<String, dynamic> toJson() => {};
 }
 
 /// The general interface of a directed edge
-abstract class DirectedEdge {
-  DirectedNode<DirectedEdge> destination, source;
-
-  DirectedEdge(this.source, this.destination);
-}
+abstract class DirectedEdge extends Component
+    with ComponentConnector, DirectedComponentConnector {}
 
 /// A weigthed implementation of [DirectedEdge]
 class DirectedWeightedEdge extends DirectedEdge {
@@ -53,18 +58,32 @@ class DirectedWeightedEdge extends DirectedEdge {
 
   DirectedWeightedEdge(DirectedNode source, DirectedNode destination,
       [Fraction weight])
-      : weight = weight ?? Fraction(1),
-        super(source, destination);
+      : weight = weight ?? Fraction(1) {
+    setComponents(source, destination);
+  }
+
+  @override
+  void read(Map<String, dynamic> map) {}
+
+  @override
+  Map<String, dynamic> toJson() => {};
 }
 
 /// An unweighted implementation of [DirectedEdge]
 class DirectedUnweightedEdge extends DirectedEdge {
-  DirectedUnweightedEdge(DirectedNode source, DirectedNode destination)
-      : super(source, destination);
+  DirectedUnweightedEdge(DirectedNode source, DirectedNode destination) {
+    setComponents(source, destination);
+  }
+
+  @override
+  void read(Map<String, dynamic> map) {}
+
+  @override
+  Map<String, dynamic> toJson() {}
 }
 
 class DirectedGraph<NodeType extends DirectedNode,
-    EdgeType extends DirectedEdge> extends Component {
+    EdgeType extends DirectedEdge> extends SuperComponent {
   List<NodeType> nodes;
 
   DirectedGraph([List<NodeType> nodes]) : nodes = nodes ?? [];
@@ -114,26 +133,38 @@ class DirectedGraph<NodeType extends DirectedNode,
   }
 
   bool addEdge(EdgeType edge, {bool replace = true}) {
-    var idxOut = edge.source.outgoingEdgeIdxTo(edge.destination);
-    var idxIn = edge.destination.incomingEdgeIdxFrom(edge.source);
+    if (!(edge is DirectedEdge))
+      throw FormatException('Edge must be instance of DirectedEdge');
+    DirectedNode source = edge.source, destination = edge.destination;
+
+    var idxOut = source.outgoingEdgeIdxTo(edge.destination);
+    var idxIn = destination.incomingEdgeIdxFrom(edge.source);
     if (idxOut == -1 && idxIn != -1 || idxOut != -1 && idxIn == -1)
       throw Exception('Graph is in invalid state. Please fix');
 
     bool r1 = true, r2 = true;
     if (idxOut != -1) {
-      if (replace) edge.source.outEdges[idxOut] = edge;
+      if (replace) source.outEdges[idxOut] = edge;
       r1 = replace;
     } else {
-      edge.source.outEdges.add(edge);
+      source.outEdges.add(edge);
     }
 
     if (idxIn != -1) {
-      if (replace) edge.destination.inEdges[idxIn] = edge;
+      if (replace) destination.inEdges[idxIn] = edge;
       r2 = replace;
-    } else {
-      edge.destination.inEdges.add(edge);
-    }
+    } else
+      destination.inEdges.add(edge);
 
     return r1 && r2;
   }
+
+  @override
+  List<Component> children() => nodes;
+
+  @override
+  void read(Map<String, dynamic> map) {}
+
+  @override
+  Map<String, dynamic> toJson() => {};
 }

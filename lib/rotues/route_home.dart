@@ -21,6 +21,7 @@ class RouteHome extends StatefulWidget {
 
 class RouteHomeState extends State<RouteHome> {
   GraphController controller;
+  GlobalKey<WindowControllerState> key = GlobalKey();
 
   @override
   void initState() {
@@ -40,41 +41,46 @@ class RouteHomeState extends State<RouteHome> {
     return Scaffold(
       extendBody: true,
       body: WindowController(
+        key: key,
+        initialStates: {
+          'time': WindowState(
+            builder: (context) => WidgetTimeController(controller: controller),
+            displayName: 'Simulation Controller',
+            size: Size(300, 100),
+            type: WindowType.Open,
+          ),
+          'zoom': WindowState(
+            builder: (context) => WidgetZoom(controller: controller),
+            displayName: 'Zoom',
+            size: Size(120, 100),
+            type: WindowType.Open,
+          ),
+          'generator': WindowState(
+            builder: (context) => WidgetGenerator(
+              controller: controller,
+            ),
+            displayName: 'Generator',
+            size: Size(250, 200),
+            type: WindowType.Open,
+          ),
+          'simulate': WindowState(
+            builder: (context) => WidgetSimulate(controller: controller),
+            displayName: 'Simulate',
+            size: Size(250, 100),
+            type: WindowType.Open,
+          ),
+          'info': WindowState(
+            builder: (context) => WidgetInfo(),
+            displayName: 'Info',
+            size: Size(250, 200),
+            type: WindowType.Open,
+          )
+        },
         child: Stack(
           fit: StackFit.expand,
           children: <Widget>[
             GraphWidget(
               controller: controller,
-            ),
-            Positioned(
-              top: 10,
-              left: 10,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  WidgetTimeController(controller: controller),
-                  WidgetZoom(
-                    controller: controller,
-                  )
-                ],
-              ),
-            ),
-            Positioned(
-              top: 10,
-              right: 10,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: <Widget>[
-                  WidgetGenerator(
-                    controller: controller,
-                  ),
-                  SizedBox(
-                    height: 10,
-                  ),
-                  WidgetSimulate(controller: controller),
-                  WidgetInfo(),
-                ],
-              ),
             ),
           ],
         ),

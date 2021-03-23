@@ -53,62 +53,49 @@ class TimeControllerState extends State<WidgetTimeController> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10.0),
-      ),
-      elevation: 2.0,
-      color: Colors.white,
-      child: Material(
-        type: MaterialType.transparency,
-        child: SizedBox(
-          height: 60.0,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        IconButton(
+          icon: Icon(Icons.pause),
+          onPressed: _onPause,
+          tooltip: 'Pause',
+        ),
+        IconButton(
+          icon: Icon(Icons.play_arrow),
+          onPressed: _onPlay,
+          tooltip: 'Play',
+        ),
+        IconButton(
+          icon: Icon(Icons.keyboard_arrow_right),
+          onPressed: _onStep,
+          tooltip: 'Step',
+        ),
+        Container(
+          height: 40.0,
+          width: 120.0,
+          alignment: Alignment.center,
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              IconButton(
-                icon: Icon(Icons.pause),
-                onPressed: _onPause,
-                tooltip: 'Pause',
-              ),
-              IconButton(
-                icon: Icon(Icons.play_arrow),
-                onPressed: _onPlay,
-                tooltip: 'Play',
-              ),
-              IconButton(
-                icon: Icon(Icons.keyboard_arrow_right),
-                onPressed: _onStep,
-                tooltip: 'Step',
-              ),
-              Container(
-                height: 40.0,
-                width: 120.0,
-                alignment: Alignment.center,
-                child: Row(
-                  children: <Widget>[
-                    Text('Step Count:'),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: TextField(
-                        controller: stepText,
-                        decoration: InputDecoration.collapsed(
-                          hintText: '1',
-                        ),
-                      ),
-                    )
-                  ],
+            children: <Widget>[
+              Text('Step Count:'),
+              SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: stepText,
+                  decoration: InputDecoration.collapsed(
+                    hintText: '1',
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: Icon(Icons.last_page),
-                onPressed: _onSteps,
-                tooltip: 'Steps',
-              ),
+              )
             ],
           ),
         ),
-      ),
+        IconButton(
+          icon: Icon(Icons.last_page),
+          onPressed: _onSteps,
+          tooltip: 'Steps',
+        ),
+      ],
     );
   }
 }

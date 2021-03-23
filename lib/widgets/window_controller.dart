@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:graph_translator/state_events.dart';
+import 'package:graph_translator/widgets/window.dart';
 
 /// Contains the different states that a window can have
 enum WindowType {
@@ -11,27 +14,108 @@ enum WindowType {
 
 /// Collects all window state information in a single class
 class WindowState {
-  Rect rect;
+  String displayName;
   WindowType type;
 
-  WindowState({this.rect = Rect.zero, this.type = WindowType.Minimized});
+  Offset offset;
+  Size size;
+  BoxConstraints constraints;
 
-  WindowState copyWith({Rect rect, WindowType type}) {
+  Widget Function(BuildContext) builder;
+
+  WindowState(
+      {this.offset = Offset.zero,
+      this.size = const Size(100, 100),
+      this.displayName,
+      this.constraints,
+      this.type = WindowType.Minimized,
+      Widget Function(BuildContext) builder})
+      : builder = builder ??
+            ((context) => Container(
+                  alignment: Alignment.center,
+                  child: Text('No Content'),
+                ));
+
+  WindowState copyWith(
+      {Size size,
+      Offset offset,
+      BoxConstraints constraints,
+      String displayName,
+      WindowType type,
+      Widget Function(BuildContext) builder}) {
     return WindowState(
-      rect: rect ?? this.rect,
+      size: size ?? this.size,
+      offset: offset ?? this.offset,
+      constraints: constraints ?? this.constraints,
+      displayName: displayName ?? this.displayName,
       type: type ?? this.type,
+      builder: builder ?? this.builder,
     );
   }
 }
 
 class WindowData {
-  EventController<WindowState> _eventController;
-  OverlayEntry _entry;
+  // private members //
 
-  WindowData(this._eventController, this._entry);
+  /// The event controller that is responsible for dispatching all window event
+  /// changes.
+  EventController<WindowState> _eventController;
+
+  /// The entry that is used to display this
+  OverlayEntry _entry;
+  // public API //
 
   EventController<WindowState> get eventController => _eventController;
-  OverlayEntry get entry => _entry;
+
+  WindowData({WindowState initial})
+      : _eventController =
+            EventController<WindowState>(initial ?? WindowState()) {
+    _entry = _createOverlayEntry();
+  }
+
+  void insert(BuildContext context) {
+    Overlay.of(context).insert(_entry);
+  }
+
+  void remove() {
+    _entry?.remove();
+  }
+
+  OverlayEntry _createOverlayEntry() {
+    return OverlayEntry(builder: (context) => WindowWidget(data: this));
+  }
+
+  void dispose() {
+    remove();
+    _entry = null;
+    _eventController?.dispose();
+    _eventController = null;
+  }
+
+  /// Creates a new event and moves the window
+  void move(Offset offset) {
+    eventController.addEvent(eventController.lastEvent.copyWith(
+      offset: eventController.lastEvent.offset + offset,
+    ));
+  }
+
+  /// Creates a new event and sets the state of the window
+  void setState(WindowType type) {
+    eventController.addEvent(eventController.lastEvent.copyWith(
+      type: type,
+    ));
+  }
+
+  WindowState get state => eventController.lastEvent;
+
+  /// Creates a new event and minimizes the window
+  void minimize() => setState(WindowType.Minimized);
+
+  /// Creates a new event and opens the window
+  void open() => setState(WindowType.Open);
+
+  /// Creates a new event and closes the window
+  void close() => setState(WindowType.Closed);
 }
 
 /// A reference to a window that is used by clients to make changes to the
@@ -49,42 +133,15 @@ class Window {
     if (ctx == null) return null;
     return Window(ctx, name);
   }
-
-  /// Creates a new event and moves the window
-  void move(Offset offset) {
-    var win = stateRef.getWindowData(title);
-    var eventController = win.eventController;
-    eventController.addEvent(eventController.lastEvent.copyWith(
-      rect: eventController.lastEvent.rect.shift(offset),
-    ));
-  }
-
-  /// Creates a new event and sets the state of the window
-  void setState(WindowType type) {
-    var win = stateRef.getWindowData(title);
-    var eventController = win.eventController;
-    eventController.addEvent(eventController.lastEvent.copyWith(
-      type: type,
-    ));
-  }
-
-  WindowState get state =>
-      stateRef.getWindowData(title).eventController.lastEvent;
-
-  /// Creates a new event and minimizes the window
-  void minimize() => setState(WindowType.Minimized);
-
-  /// Creates a new event and opens the window
-  void open() => setState(WindowType.Open);
-
-  /// Creates a new event and closes the window
-  void close() => setState(WindowType.Closed);
 }
 
 /// The [Widget] that combines all the functionality in a single
 class WindowController extends StatefulWidget {
   final Widget child;
-  const WindowController({@required this.child, Key key}) : super(key: key);
+  final Map<String, WindowState> initialStates;
+  const WindowController(
+      {@required this.child, this.initialStates = const {}, Key key})
+      : super(key: key);
 
   @override
   WindowControllerState createState() => WindowControllerState();
@@ -93,34 +150,35 @@ class WindowController extends StatefulWidget {
 class WindowControllerState extends State<WindowController> {
   final Map<String, WindowData> state = {};
 
-  WindowData getWindowData(String title) {
+  WindowData getWindowData(String title, {WindowState initial}) {
     if (state.containsKey(title)) {
       return state[title];
     } else {
-      createWindowData(title);
+      addWindow(title, initial);
       return state[title];
     }
   }
 
-  void createWindowData(String title) {
-    var data = WindowData(EventController<WindowState>(WindowState()), null);
-    data.eventController.stream.listen((event) {});
+  void addWindow(String title, WindowState initial) {
+    if (state.containsKey(title)) state[title].dispose();
+    WindowData data = WindowData(initial: initial);
+    data.insert(context);
+    state[title] = data;
   }
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(Duration(milliseconds: 500), () {
-      Overlay.of(context).insert(_createOverlayEntry());
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      for (var entry in widget.initialStates.entries) {
+        addWindow(entry.key, entry.value);
+      }
     });
   }
 
   @override
   void dispose() {
-    for (var value in state.values) {
-      value.eventController.dispose();
-      value.entry.remove();
-    }
+    for (var value in state.values) value.dispose();
     super.dispose();
   }
 
@@ -131,36 +189,6 @@ class WindowControllerState extends State<WindowController> {
     var ctx = context.findAncestorStateOfType<WindowControllerState>();
     assert(!require || ctx != null, 'WindowController must not be null');
     return ctx;
-  }
-
-  OverlayEntry _createOverlayEntry() {
-    RenderBox renderBox = context.findRenderObject();
-    var size = renderBox.size;
-    var offset = renderBox.localToGlobal(Offset.zero);
-
-    return OverlayEntry(
-      builder: (context) => Positioned(
-        left: 100,
-        top: 100,
-        width: 50.0,
-        height: 50.0,
-        child: Material(
-          elevation: 4.0,
-          child: ListView(
-            padding: EdgeInsets.zero,
-            shrinkWrap: true,
-            children: <Widget>[
-              ListTile(
-                title: Text('Syria'),
-              ),
-              ListTile(
-                title: Text('Lebanon'),
-              )
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   @override
