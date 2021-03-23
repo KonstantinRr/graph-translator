@@ -7,13 +7,23 @@ import 'package:flutter/material.dart';
 import 'package:graph_translator/rotues/rotue_splash.dart';
 import 'package:graph_translator/rotues/route_home.dart';
 import 'package:graph_translator/rotues/route_unknown.dart';
+import 'package:graph_translator/state/graph.dart';
+import 'package:graph_translator/state/graph_undirected.dart';
 import 'package:graph_translator/state_manager.dart';
 import 'package:graph_translator/util/linalg.dart';
 import 'package:graph_translator/util/transtion.dart';
 
 void main() {
+  print(typeToString<UndirectedNode>());
   testMatrix();
   runApp(const GraphTranslator());
+}
+
+class Nullable<T> {
+  T _value;
+
+  Nullable(this._value);
+  T get value => _value;
 }
 
 class GraphTranslator extends StatelessWidget {

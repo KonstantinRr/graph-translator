@@ -8,44 +8,46 @@ import 'dart:math' as math;
 
 import 'package:graph_translator/state/graph.dart';
 
-class DirectedNode<EdgeType extends DirectedEdge> extends Component
-    with ComponentObject {
+class DirectedNode extends Component with ComponentObject {
   /// Stores the incoming and outgoing edges
-  List<EdgeType> outEdges, inEdges;
+  List<DirectedEdge> outEdges, inEdges;
 
   DirectedNode(
-      {List<EdgeType> outEdges, List<EdgeType> inEdges, double x, double y})
+      {List<DirectedEdge> outEdges,
+      List<DirectedEdge> inEdges,
+      double x,
+      double y})
       : outEdges = outEdges ?? [],
         inEdges = inEdges ?? [] {
     setCoords(x, y);
   }
-  DirectedNode.random({List<EdgeType> outEdges, List<EdgeType> inEdges})
+  DirectedNode.random({List<DirectedEdge> outEdges, List<DirectedEdge> inEdges})
       : outEdges = outEdges ?? [],
         inEdges = inEdges ?? [] {
     randPosition();
   }
 
   /// Returns the edge idx that connects nd to this
-  int incomingEdgeIdxFrom(DirectedNode<EdgeType> nd) =>
+  int incomingEdgeIdxFrom(DirectedNode nd) =>
       inEdges.indexWhere((element) => element.p1 == nd);
 
   /// Returns the edge idx that connects this to nd
-  int outgoingEdgeIdxTo(DirectedNode<EdgeType> nd) =>
+  int outgoingEdgeIdxTo(DirectedNode nd) =>
       outEdges.indexWhere((element) => element.p2 == nd);
 
   /// Returns the edge that connects nd to this
-  EdgeType incomingEdgeFrom(DirectedNode<EdgeType> nd) =>
+  DirectedEdge incomingEdgeFrom(DirectedNode nd) =>
       inEdges.firstWhere((element) => element.p1 == nd, orElse: () => null);
 
   /// Returns the edge that connects this to nd
-  EdgeType outgoingEdgeTo(DirectedNode<EdgeType> nd) =>
+  DirectedEdge outgoingEdgeTo(DirectedNode nd) =>
       outEdges.firstWhere((element) => element.p2 == nd, orElse: () => null);
 
   @override
   void read(Map<String, dynamic> map) {}
 
   @override
-  Map<String, dynamic> toJson() => {};
+  Map<String, dynamic> toJson() => {'type': typeToString<DirectedNode>()};
 }
 
 /// The general interface of a directed edge
@@ -160,7 +162,7 @@ class DirectedGraph<NodeType extends DirectedNode,
   }
 
   @override
-  List<Component> children() => nodes;
+  Iterable<Component> get children => nodes;
 
   @override
   void read(Map<String, dynamic> map) {}

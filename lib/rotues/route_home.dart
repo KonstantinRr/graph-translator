@@ -41,50 +41,52 @@ class RouteHomeState extends State<RouteHome> {
     return Scaffold(
       extendBody: true,
       body: WindowController(
-        key: key,
-        initialStates: {
-          'time': WindowState(
-            builder: (context) => WidgetTimeController(controller: controller),
-            displayName: 'Simulation Controller',
-            size: Size(300, 100),
-            type: WindowType.Open,
-          ),
-          'zoom': WindowState(
-            builder: (context) => WidgetZoom(controller: controller),
-            displayName: 'Zoom',
-            size: Size(120, 100),
-            type: WindowType.Open,
-          ),
-          'generator': WindowState(
-            builder: (context) => WidgetGenerator(
-              controller: controller,
+          key: key,
+          initialStates: {
+            'time': WindowState(
+              builder: (context) =>
+                  WidgetTimeController(controller: controller),
+              displayName: 'Simulation Controller',
+              size: Size(300, 100),
+              type: WindowType.Open,
             ),
-            displayName: 'Generator',
-            size: Size(250, 200),
-            type: WindowType.Open,
-          ),
-          'simulate': WindowState(
-            builder: (context) => WidgetSimulate(controller: controller),
-            displayName: 'Simulate',
-            size: Size(250, 100),
-            type: WindowType.Open,
-          ),
-          'info': WindowState(
-            builder: (context) => WidgetInfo(),
-            displayName: 'Info',
-            size: Size(250, 200),
-            type: WindowType.Open,
-          )
-        },
-        child: Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            GraphWidget(
-              controller: controller,
+            'zoom': WindowState(
+              builder: (context) => WidgetZoom(controller: controller),
+              displayName: 'Zoom',
+              size: Size(120, 100),
+              type: WindowType.Open,
             ),
-          ],
-        ),
-      ),
+            'generator': WindowState(
+              builder: (context) => WidgetGenerator(
+                controller: controller,
+              ),
+              displayName: 'Generator',
+              size: Size(250, 200),
+              type: WindowType.Open,
+            ),
+            'simulate': WindowState(
+              builder: (context) => WidgetSimulate(controller: controller),
+              displayName: 'Simulate',
+              size: Size(250, 100),
+              type: WindowType.Open,
+            ),
+            'info': WindowState(
+              builder: (context) => WidgetInfo(),
+              displayName: 'Info',
+              size: Size(250, 200),
+              type: WindowType.Open,
+            )
+          },
+          child: LayoutBuilder(
+            builder: (context, constraints) => Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                GraphWidget(
+                  controller: controller,
+                ),
+              ],
+            ),
+          )),
     );
   }
 }

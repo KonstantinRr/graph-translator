@@ -1,31 +1,34 @@
 import 'package:fraction/fraction.dart';
 import 'package:graph_translator/state/graph.dart';
 
-class UndirectedNode<EdgeType extends UndirectedEdge> extends Component
-    with ComponentObject {
-  List<EdgeType> edges;
+class UndirectedNode extends Component with ComponentObject {
+  List<UndirectedEdge> edges;
 
-  UndirectedNode({double x, double y, List<EdgeType> edges})
+  UndirectedNode({double x, double y, List<UndirectedEdge> edges})
       : edges = edges ?? [] {
     setCoords(x, y);
   }
 
-  UndirectedNode.random([List<EdgeType> edges]) : edges = edges ?? [] {
+  UndirectedNode.random([List<UndirectedEdge> edges]) : edges = edges ?? [] {
     randPosition();
   }
 
   /// Returns the edge idx that connects nd to this
-  int edgeIdxTo(UndirectedNode<EdgeType> nd) =>
+  int edgeIdxTo(UndirectedNode nd) =>
       edges.indexWhere((element) => element.p1 == nd || element.p2 == nd);
 
   /// Returns the edge idx that connects this to nd
-  EdgeType edgeTo(UndirectedNode<EdgeType> nd) =>
+  UndirectedEdge edgeTo(UndirectedNode nd) =>
       edges.firstWhere((element) => element.p1 == nd || element.p2 == nd,
           orElse: () => null);
 
   @override
   void read(Map<String, dynamic> map) {}
-  Map<String, dynamic> toJson() => {'edges': edges.map((e) => e.toJson())};
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<UndirectedNode>(),
+        'parent': super.toJson(),
+        'edges': edges.map((e) => e.toJson()),
+      };
 }
 
 abstract class UndirectedEdge extends Component
@@ -40,7 +43,10 @@ class UndirectedUnweightedEdge extends UndirectedEdge {
   void read(Map<String, dynamic> map) {}
 
   @override
-  Map<String, dynamic> toJson() => {};
+  Map<String, dynamic> toJson() => {
+        'type': 'UndirectedUnweightedEdge',
+        'parent': super.toJson(),
+      };
 }
 
 class UndirectedWeightedEdge extends UndirectedEdge {
@@ -55,14 +61,17 @@ class UndirectedWeightedEdge extends UndirectedEdge {
   void read(Map<String, dynamic> map) {}
 
   @override
-  Map<String, dynamic> toJson() => {};
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<UndirectedWeightedEdge>(),
+        'parent': super.toJson(),
+        'weight': weight
+      };
 }
 
-class GraphUndirected<NodeType extends UndirectedNode,
-    EdgeType extends UndirectedEdge> extends SuperComponent {
-  List<NodeType> nodes;
+class GraphUndirected extends SuperComponent {
+  List<UndirectedNode> nodes;
 
-  bool addEdge(EdgeType edge, {bool replace = true}) {
+  bool addEdge(UndirectedEdge edge, {bool replace = true}) {
     if (!(edge.p1 is UndirectedNode) || !(edge.p2 is UndirectedNode))
       throw FormatException('Edge must point to instance of UndirectedNode');
     UndirectedNode p1 = edge.p1, p2 = edge.p2;
@@ -82,12 +91,15 @@ class GraphUndirected<NodeType extends UndirectedNode,
   }
 
   @override
-  List<Component> children() => nodes;
+  Iterable<Component> get children => nodes;
 
   @override
   void read(Map<String, dynamic> map) {}
 
   @override
-  Map<String, dynamic> toJson() =>
-      {'nodes': nodes.map((e) => e.toJson()).toList()};
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<GraphUndirected>(),
+        'parent': super.toJson(),
+        'nodes': nodes?.map((e) => e.toJson())?.toList(),
+      };
 }

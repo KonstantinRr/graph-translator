@@ -4,19 +4,21 @@
 /// Konstantin Rolf (S3750558) - k.rolf@student.rug.nl
 
 import 'dart:async';
+import 'dart:math';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:graph_translator/main.dart';
+import 'package:graph_translator/state/graph.dart';
 import 'package:graph_translator/state/graph_directed.dart';
+import 'package:graph_translator/state_events.dart';
 
 class GraphTranslator {
   double zoom;
   double dx, dy;
 
   GraphTranslator({this.zoom = 1.0, this.dx = 0.0, this.dy = 0.0});
-
-  bool operator ==(o) =>
-      o is GraphTranslator && o.zoom == zoom && o.dx == dx && o.dy == dy;
 
   void applyZoom(double azoom) {
     zoom *= azoom;
@@ -27,29 +29,32 @@ class GraphTranslator {
     dy += offset.dy / zoom;
   }
 
+  Offset forward(Offset tx) => tx.translate(dx, dy).scale(zoom, zoom);
+  Offset reverse(Offset tx) => tx.scale(1 / zoom, 1 / zoom).translate(-dx, -dy);
+
+  Offset get offset => Offset(dx, dy);
+
+  bool operator ==(o) =>
+      o is GraphTranslator && o.zoom == zoom && o.dx == dx && o.dy == dy;
+
   @override
   int get hashCode => hashValues(zoom, dx, dy);
 }
 
 class GraphPainter extends CustomPainter {
-  final GraphTranslator translator;
-  final DirectedGraph graph;
+  final GraphControllerState state;
   final bool skipInvisible;
-  const GraphPainter(this.graph, this.translator, {this.skipInvisible = false});
+  const GraphPainter(this.state, {this.skipInvisible = false});
+
+  GraphTranslator get translator => state.translator;
+  SuperComponent get graph => state.graph;
 
   Offset pointScale(Offset offset) {
     return Offset((offset.dx + translator.dx) * translator.zoom,
         (offset.dy + translator.dy) * translator.zoom);
   }
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.save();
-    // applies rendering transformations
-    //canvas.scale(1.0 / max(size.width, size.height));
-    canvas.translate(-translator.dx, -translator.dy);
-    canvas.scale(translator.zoom);
-
+  void paintDirected(DirectedGraph graph, Canvas canvas, Size size) {
     Rect renderRect = Rect.fromPoints(
         pointScale(Offset.zero), pointScale(Offset(size.width, size.height)));
     var radius = 5.0 / translator.zoom;
@@ -79,6 +84,25 @@ class GraphPainter extends CustomPainter {
         canvas.drawLine(edge.source.offset, edge.destination.offset, edgePaint);
       }
     }
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    // applies rendering transformations
+    //canvas.scale(1.0 / max(size.width, size.height));
+    canvas.translate(-translator.dx, -translator.dy);
+    canvas.scale(translator.zoom);
+
+    if (state.graph is DirectedGraph) paintDirected(state.graph, canvas, size);
+
+    if (state.source != null && state.destination != null) {
+      var paint = Paint()
+        ..color = Colors.blue.withOpacity(0.3)
+        ..style = PaintingStyle.fill;
+      canvas.drawRect(Rect.fromPoints(state.source, state.destination), paint);
+    }
+
     canvas.restore();
   }
 
@@ -87,57 +111,63 @@ class GraphPainter extends CustomPainter {
 }
 
 class GraphControllerState {
-  final DirectedGraph graph;
+  final SuperComponent graph;
   final GraphTranslator translator;
-  const GraphControllerState(this.graph, this.translator);
+  final Offset source, destination;
+  const GraphControllerState(
+      this.graph, this.translator, this.source, this.destination);
+
+  GraphControllerState copyWith(
+      {SuperComponent graph,
+      GraphTranslator translator,
+      Nullable<Offset> source,
+      Nullable<Offset> destination}) {
+    return GraphControllerState(
+        graph ?? this.graph,
+        translator ?? this.translator,
+        source == null ? this.source : source.value,
+        destination == null ? this.destination : destination.value);
+  }
+
+  @override
+  String toString() => 'source: $source dest: $destination';
 }
 
 class GraphController {
-  DirectedGraph _graph;
-  GraphTranslator _translator;
-  StreamController<GraphControllerState> _controller;
+  EventController<GraphControllerState> _controller;
 
-  GraphController({DirectedGraph graph, GraphTranslator translator})
-      : _controller = StreamController.broadcast(),
-        _graph = graph ?? DirectedGraph(),
-        _translator = translator ?? GraphTranslator() {}
+  GraphController({SuperComponent graph, GraphTranslator translator})
+      : _controller = EventController(GraphControllerState(
+          graph ?? DirectedGraph(),
+          GraphTranslator(),
+          null,
+          null,
+        ));
 
   Stream<GraphControllerState> get events => _controller.stream;
-  GraphControllerState get state => GraphControllerState(_graph, _translator);
+  GraphControllerState get state => _controller.lastEvent;
 
-  GraphTranslator get translator => _translator;
-  DirectedGraph get graph => _graph;
+  GraphTranslator get translator => _controller.lastEvent.translator;
+  DirectedGraph get graph => _controller.lastEvent.graph;
+  Offset get selectionSource => _controller.lastEvent.source;
+  Offset get selectionDestination => _controller.lastEvent.destination;
 
-  set graph(DirectedGraph graph) {
-    if (_graph != graph) {
-      _graph = graph;
-      notify();
-    }
-  }
+  set graph(DirectedGraph graph) =>
+      _controller.addEvent(state.copyWith(graph: graph));
+  set translator(GraphTranslator translator) =>
+      _controller.addEvent(state.copyWith(translator: translator));
+  set selectionSource(Offset source) =>
+      _controller.addEvent(state.copyWith(source: Nullable(source)));
+  set selectionDestination(Offset destination) =>
+      _controller.addEvent(state.copyWith(destination: Nullable(destination)));
 
-  set translator(GraphTranslator translator) {
-    if (_translator != translator) {
-      _translator = translator;
-      notify();
-    }
-  }
-
-  void updateGraphState(void Function(DirectedGraph) func, {bool nt = true}) {
-    func(_graph);
-    notify(nt);
-  }
-
-  void updateViewState(void Function(GraphTranslator) func, {bool nt = true}) {
-    func(_translator);
-    notify(nt);
-  }
-
-  void notify([bool nt = true]) {
-    if (nt) _controller.add(state);
-  }
+  void updateGraphState(DirectedGraph Function(DirectedGraph) func) =>
+      graph = func(graph);
+  void updateViewState(GraphTranslator Function(GraphTranslator) func) =>
+      translator = func(translator);
 
   void dispose() {
-    _controller.close();
+    _controller.dispose();
   }
 }
 
@@ -153,27 +183,37 @@ class GraphWidget extends StatelessWidget {
       child: Listener(
         //onPointerDown: (event) { print('Down'); },
         //onPointerHover: (event) { print('Hover'); },
+        onPointerUp: (upEvent) {
+          controller.selectionSource = null;
+          controller.selectionDestination = null;
+        },
+        onPointerDown: (downEvent) {
+          if (downEvent.buttons & kPrimaryMouseButton != 0) {
+            controller.selectionSource =
+                controller.translator.forward(downEvent.localPosition);
+          }
+        },
         onPointerMove: (moveEvent) {
-          controller.updateViewState((view) {
-            view.applyTranslation(
-                -moveEvent.delta * controller.translator.zoom);
-          });
+          if (moveEvent.buttons & kSecondaryMouseButton != 0) {
+            controller.updateViewState((view) {
+              return view
+                ..applyTranslation(
+                    -moveEvent.delta * controller.translator.zoom);
+            });
+          }
+          if (moveEvent.buttons & kPrimaryMouseButton != 0) {
+            //print('Down 2');
+            controller.selectionDestination =
+                controller.translator.forward(moveEvent.localPosition);
+          }
         },
         behavior: HitTestBehavior.opaque,
-        child: StreamBuilder<GraphControllerState>(
-          stream: controller.events,
-          initialData: controller.state,
-          builder: (context, snap) {
-            if (snap.hasError) return Center(child: Text('Error'));
-            if (snap.hasData) {
-              return CustomPaint(
-                painter: GraphPainter(
-                  snap.data.graph,
-                  snap.data.translator,
-                ),
-              );
-            }
-            return Center(child: Text('No Data'));
+        child: EventStreamBuilder<GraphControllerState>(
+          controller: controller._controller,
+          builder: (context, data) {
+            return CustomPaint(
+              painter: GraphPainter(data),
+            );
           },
         ),
       ),

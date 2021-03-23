@@ -4,13 +4,55 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math.dart';
 
-abstract class SuperComponent extends Component {
-  List<Component> children();
+String typeToString<T>() => T.toString();
+
+abstract class SuperComponent extends Component {}
+
+class ListenerHandler {
+  dynamic listenerData;
+
+  void notifyListeners(Component component) {
+    if (listenerData is void Function(Component))
+      listenerData(component);
+    else if (listenerData is List) listenerData.forEach((e) => e(component));
+  }
+
+  void addListener(void Function(Component) listener) {
+    if (listenerData is void Function(Component)) {
+      listenerData = <void Function(Component)>[listenerData, listener];
+    } else if (listenerData is List) {
+      listenerData.add(listener);
+    } else // null case
+      listenerData = listener;
+  }
+
+  void removeListener(void Function(Component) listener) {
+    if (listener == listenerData)
+      listenerData = null;
+    else if (listenerData is List) {
+      var ldata = listenerData as List;
+      ldata.remove(listener);
+      if (ldata.length == 1) {
+        listenerData = ldata.first;
+      }
+    }
+  }
 }
 
-abstract class Component {
+abstract class Component extends ListenerHandler {
+  final UniqueKey key = UniqueKey();
+  Component parent;
+
+  void notify([Component src]) {
+    notifyListeners(src);
+    parent?.notify(src ?? this);
+  }
+
+  int get length => 0;
+  Iterable<Component> get children => [];
+
   void read(Map<String, dynamic> map);
-  Map<String, dynamic> toJson();
+  Map<String, dynamic> toJson() => {'type': 'Component'};
 }
 
 mixin Input {

@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +19,7 @@ class WindowState {
 
   Offset offset;
   Size size;
+  bool resizeWidth, resizeHeight;
   BoxConstraints constraints;
 
   Widget Function(BuildContext) builder;
@@ -26,8 +27,11 @@ class WindowState {
   WindowState(
       {this.offset = Offset.zero,
       this.size = const Size(100, 100),
+      this.resizeWidth = true,
+      this.resizeHeight = true,
       this.displayName,
-      this.constraints,
+      this.constraints = const BoxConstraints(
+          minWidth: 100, minHeight: 100, maxWidth: 1000, maxHeight: 1000),
       this.type = WindowType.Minimized,
       Widget Function(BuildContext) builder})
       : builder = builder ??
@@ -41,6 +45,8 @@ class WindowState {
       Offset offset,
       BoxConstraints constraints,
       String displayName,
+      bool resizeWidth,
+      bool resizeHeight,
       WindowType type,
       Widget Function(BuildContext) builder}) {
     return WindowState(
@@ -48,6 +54,8 @@ class WindowState {
       offset: offset ?? this.offset,
       constraints: constraints ?? this.constraints,
       displayName: displayName ?? this.displayName,
+      resizeHeight: resizeHeight ?? this.resizeHeight,
+      resizeWidth: resizeWidth ?? this.resizeWidth,
       type: type ?? this.type,
       builder: builder ?? this.builder,
     );
@@ -72,6 +80,8 @@ class WindowData {
             EventController<WindowState>(initial ?? WindowState()) {
     _entry = _createOverlayEntry();
   }
+
+  WindowState get state => eventController.lastEvent;
 
   void insert(BuildContext context) {
     Overlay.of(context).insert(_entry);
@@ -99,14 +109,52 @@ class WindowData {
     ));
   }
 
+  void expandSize(Offset offset) {
+    _eventController.addEvent(
+      state.copyWith(
+        size: state.constraints.constrain(Size(
+          state.size.width + offset.dx,
+          state.size.height + offset.dy,
+        )),
+      ),
+    );
+  }
+
+  Offset offsetFromSize(Size size) => Offset(size.width, size.height);
+  Size sizeFromOffset(Offset offset) => Size(offset.dx, offset.dy);
+
+  void expandOrigin(Offset dOffset) {
+    Size newSize = state.constraints.constrain(state.size - dOffset);
+    Offset oldEnd = state.offset + offsetFromSize(state.size);
+    Offset newEnd = state.offset + offsetFromSize(newSize);
+
+    var difference = state.offset + (oldEnd - newEnd);
+    eventController.addEvent(state.copyWith(
+      size: newSize,
+      offset: difference,
+    ));
+  }
+
+  void expand(Size size) {
+    Offset newOffset = Offset(
+      state.offset.dx + (size.width < 0 ? size.width : 0),
+      state.offset.dy + (size.height < 0 ? size.height : 0),
+    );
+    Size newSize = Size(
+      state.size.width + (size.width > 0 ? size.width : 0),
+      state.size.height + (size.height > 0 ? size.height : 0),
+    );
+    _eventController.addEvent(
+      state.copyWith(offset: newOffset, size: newSize),
+    );
+  }
+
   /// Creates a new event and sets the state of the window
   void setState(WindowType type) {
     eventController.addEvent(eventController.lastEvent.copyWith(
       type: type,
     ));
   }
-
-  WindowState get state => eventController.lastEvent;
 
   /// Creates a new event and minimizes the window
   void minimize() => setState(WindowType.Minimized);
@@ -170,9 +218,8 @@ class WindowControllerState extends State<WindowController> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      for (var entry in widget.initialStates.entries) {
+      for (var entry in widget.initialStates.entries)
         addWindow(entry.key, entry.value);
-      }
     });
   }
 
