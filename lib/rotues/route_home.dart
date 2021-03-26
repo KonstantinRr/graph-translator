@@ -73,7 +73,8 @@ class RouteHomeState extends State<RouteHome> {
             'info': WindowState(
               builder: (context) => WidgetInfo(),
               displayName: 'Info',
-              size: Size(250, 200),
+              scale: Size(0.5, 0.5),
+              //offsetScale: Offset(0.5, 0.5),
               type: WindowType.Open,
             )
           },

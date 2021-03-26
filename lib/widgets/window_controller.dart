@@ -17,8 +17,8 @@ class WindowState {
   String displayName;
   WindowType type;
 
-  Offset offset;
-  Size size;
+  Offset offset, offsetScale;
+  Size size, scale;
   bool resizeWidth, resizeHeight;
   BoxConstraints constraints;
 
@@ -29,12 +29,17 @@ class WindowState {
       this.size = const Size(100, 100),
       this.resizeWidth = true,
       this.resizeHeight = true,
+      this.offsetScale = Offset.zero,
+      this.scale = Size.zero,
       this.displayName,
       this.constraints = const BoxConstraints(
           minWidth: 100, minHeight: 100, maxWidth: 1000, maxHeight: 1000),
       this.type = WindowType.Minimized,
       Widget Function(BuildContext) builder})
-      : builder = builder ??
+      : assert(scale != null, 'Scale must not be null!'),
+        assert(offsetScale != null, 'OffsetScale must not be nulL!'),
+        assert(size != null, 'Size must not be null!'),
+        builder = builder ??
             ((context) => Container(
                   alignment: Alignment.center,
                   child: Text('No Content'),
@@ -42,7 +47,9 @@ class WindowState {
 
   WindowState copyWith(
       {Size size,
+      Size scale,
       Offset offset,
+      Offset offsetScale,
       BoxConstraints constraints,
       String displayName,
       bool resizeWidth,
@@ -53,11 +60,35 @@ class WindowState {
       size: size ?? this.size,
       offset: offset ?? this.offset,
       constraints: constraints ?? this.constraints,
+      scale: scale ?? this.scale,
+      offsetScale: offsetScale ?? this.offsetScale,
       displayName: displayName ?? this.displayName,
       resizeHeight: resizeHeight ?? this.resizeHeight,
       resizeWidth: resizeWidth ?? this.resizeWidth,
       type: type ?? this.type,
       builder: builder ?? this.builder,
+    );
+  }
+
+  WindowState copyWithSize(Size newSize) {
+    var newScale = Size(
+      size.width == 0.0 ? 0.0 : scale.width * (newSize.width / size.width),
+      size.height == 0.0 ? 0.0 : scale.height * (newSize.height / size.height),
+    );
+    return copyWith(
+      size: newSize,
+      scale: newScale,
+    );
+  }
+
+  WindowState copyWithOffset(Offset newOffset) {
+    var newOffsetScale = Offset(
+      offset.dx == 0.0 ? 0.0 : offsetScale.dx * (newOffset.dx / offset.dx),
+      offset.dy == 0.0 ? 0.0 : offsetScale.dy * (newOffset.dy / offset.dy),
+    );
+    return copyWith(
+      offset: newOffset,
+      offsetScale: newOffsetScale,
     );
   }
 }
@@ -104,15 +135,15 @@ class WindowData {
 
   /// Creates a new event and moves the window
   void move(Offset offset) {
-    eventController.addEvent(eventController.lastEvent.copyWith(
-      offset: eventController.lastEvent.offset + offset,
+    eventController.addEvent(eventController.lastEvent.copyWithOffset(
+      eventController.lastEvent.offset + offset,
     ));
   }
 
   void expandSize(Offset offset) {
     _eventController.addEvent(
-      state.copyWith(
-        size: state.constraints.constrain(Size(
+      state.copyWithSize(
+        state.constraints.constrain(Size(
           state.size.width + offset.dx,
           state.size.height + offset.dy,
         )),
@@ -129,10 +160,9 @@ class WindowData {
     Offset newEnd = state.offset + offsetFromSize(newSize);
 
     var difference = state.offset + (oldEnd - newEnd);
-    eventController.addEvent(state.copyWith(
-      size: newSize,
-      offset: difference,
-    ));
+    eventController.addEvent(
+      state.copyWithSize(newSize).copyWithOffset(difference),
+    );
   }
 
   void expand(Size size) {
@@ -145,7 +175,7 @@ class WindowData {
       state.size.height + (size.height > 0 ? size.height : 0),
     );
     _eventController.addEvent(
-      state.copyWith(offset: newOffset, size: newSize),
+      state.copyWithSize(newSize).copyWithOffset(newOffset),
     );
   }
 

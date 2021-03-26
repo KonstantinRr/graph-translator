@@ -18,28 +18,62 @@ class WindowWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return EventStreamBuilder<WindowState>(
-      controller: data.eventController,
-      builderError: (context, err) => Positioned(
-        top: 0.0,
-        left: 0.0,
-        width: 100.0,
-        height: 100.0,
-        child: Container(
-          alignment: Alignment.center,
-          child: Text('$err'),
-        ),
-      ),
-      builderNoData: (context) => Positioned.fill(
-        child: Container(),
-      ),
-      builder: (context, state) => Positioned(
-        height: state.size.height,
-        width: state.size.width,
-        left: state.offset.dx,
-        top: state.offset.dy,
-        child: buildContent(context, state),
-      ),
-    );
+        controller: data.eventController,
+        builderError: (context, err) => Positioned(
+              top: 0.0,
+              left: 0.0,
+              width: 100.0,
+              height: 100.0,
+              child: Container(
+                alignment: Alignment.center,
+                child: Text('$err'),
+              ),
+            ),
+        builderNoData: (context) => Positioned.fill(
+              child: Container(),
+            ),
+        builder: (context, state) {
+          var box = Overlay.of(context).context.findRenderObject() as RenderBox;
+          print(box.size);
+
+          // Applies the scale to the window size
+          if (state.scale.width != 0.0)
+            state.size =
+                Size(state.scale.width * box.size.width, state.size.height);
+          //else
+          //  state.scale =
+          //      Size(box.size.width / state.size.width, state.scale.height);
+
+          if (state.scale.height != 0.0)
+            state.size =
+                Size(state.size.width, state.scale.height * box.size.height);
+          //else
+          //  state.scale =
+          //      Size(state.scale.width, box.size.height / state.size.height);
+
+          // Applies the scale to the offset
+          if (state.offsetScale.dx != 0.0)
+            state.offset =
+                Offset(box.size.width * state.offsetScale.dx, state.offset.dy);
+          //else
+          //  state.offsetScale = Offset(
+          //      box.size.width / state.offsetScale.dx, state.offsetScale.dy);
+
+          if (state.offsetScale.dy != 0.0)
+            state.offset =
+                Offset(state.offset.dx, box.size.height * state.offset.dy);
+          //else
+          //  state.offsetScale =
+          //      Offset(state.offsetScale.dx, box.size.height / state.offset.dy);
+
+          return Positioned(
+            height: state.size.height,
+            width: state.size.width,
+            left: state.offset.dx,
+            top: state.offset.dy,
+            child: buildContent(context, state),
+          );
+        });
   }
 
   Widget buildListener(void Function(Offset) cb) {
