@@ -3,6 +3,14 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:graph_translator/state/graph.dart';
 
+class TreePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {}
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
 class WidgetSingleComponent extends StatefulWidget {
   final Component component;
   final int initialLength;
@@ -15,8 +23,9 @@ class WidgetSingleComponent extends StatefulWidget {
 }
 
 class WidgetSingleComponentState extends State<WidgetSingleComponent> {
+  WidgetComponentsState state;
   int currentMaxLength;
-  static const elementsMinLength = 10;
+  static const elementsMinLength = 5;
   static const elementsMaxLength = 100;
   static const addSize = 10, decreaseSize = 10;
 
@@ -29,77 +38,98 @@ class WidgetSingleComponentState extends State<WidgetSingleComponent> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    var state = WidgetComponentsState.of(context);
+    state = WidgetComponentsState.of(context);
     state.map[widget.component] = () => setState(() {});
   }
 
   @override
   void dispose() {
-    var state = WidgetComponentsState.of(context);
     state.map.remove(widget.component);
     super.dispose();
   }
 
+  void onMore() {
+    setState(() => currentMaxLength =
+        math.max(currentMaxLength - decreaseSize, elementsMinLength));
+  }
+
+  void onLess() {
+    setState(() => currentMaxLength =
+        math.min(currentMaxLength + addSize, elementsMaxLength));
+  }
+
   Component get component => widget.component;
+
+  Widget buildList(BuildContext context, Widget child) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        child,
+        Padding(
+          padding: EdgeInsets.only(left: 10.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: component.children
+                .take(currentMaxLength)
+                .map((comp) => WidgetSingleComponent(
+                      component: comp,
+                    ))
+                .toList(),
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.only(left: 10),
+          child: Row(
+            children: [
+              Card(
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: InkWell(
+                    onTap: onLess,
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      width: 25.0,
+                      height: 25.0,
+                      alignment: Alignment.center,
+                      child: Text('+'),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 10.0,
+              ),
+              Card(
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(4),
+                    onTap: onMore,
+                    child: Container(
+                      width: 25.0,
+                      height: 25.0,
+                      alignment: Alignment.center,
+                      child: Text('-'),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     var length = component.length;
-
     Widget object = Text(component.runtimeType.toString());
 
     return Container(
       child: Padding(
         padding: const EdgeInsets.only(left: 10.0),
-        child: length == 0
-            ? object
-            : Column(
-                children: [
-                  object,
-                  Column(
-                    children: component.children
-                        .take(currentMaxLength)
-                        .map((comp) => WidgetSingleComponent(
-                              component: comp,
-                            ))
-                        .toList(),
-                  ),
-                  Row(
-                    children: [
-                      InkWell(
-                        onTap: () => setState(
-                          () => currentMaxLength = math.max(
-                              currentMaxLength + addSize, elementsMaxLength),
-                        ),
-                        child: Card(
-                          child: Container(
-                            width: 25.0,
-                            height: 25.0,
-                            child: Text('+'),
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 10.0,
-                      ),
-                      InkWell(
-                        onTap: () => setState(
-                          () => currentMaxLength = math.min(
-                              currentMaxLength - decreaseSize,
-                              currentMaxLength - 10),
-                        ),
-                        child: Card(
-                          child: Container(
-                            width: 25.0,
-                            height: 25.0,
-                            child: Text('-'),
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                ],
-              ),
+        child: length == 0 ? object : buildList(context, object),
       ),
     );
   }

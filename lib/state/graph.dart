@@ -48,7 +48,7 @@ abstract class Component extends ListenerHandler {
     parent?.notify(src ?? this);
   }
 
-  int get length => 0;
+  int get length => children.length;
   Iterable<Component> get children => [];
 
   void read(Map<String, dynamic> map);

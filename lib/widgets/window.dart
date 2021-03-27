@@ -34,7 +34,6 @@ class WindowWidget extends StatelessWidget {
             ),
         builder: (context, state) {
           var box = Overlay.of(context).context.findRenderObject() as RenderBox;
-          print(box.size);
 
           // Applies the scale to the window size
           if (state.scale.width != 0.0)
@@ -101,7 +100,7 @@ class WindowWidget extends StatelessWidget {
               Listener(
                 behavior: HitTestBehavior.deferToChild,
                 onPointerMove: (moveEvent) {
-                  data.move(moveEvent.delta);
+                  if (state.move) data.move(moveEvent.delta);
                 },
                 child: Container(
                   height: 30.0,

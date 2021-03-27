@@ -19,7 +19,7 @@ class WindowState {
 
   Offset offset, offsetScale;
   Size size, scale;
-  bool resizeWidth, resizeHeight;
+  bool resizeWidth, resizeHeight, move;
   BoxConstraints constraints;
 
   Widget Function(BuildContext) builder;
@@ -29,6 +29,7 @@ class WindowState {
       this.size = const Size(100, 100),
       this.resizeWidth = true,
       this.resizeHeight = true,
+      this.move = true,
       this.offsetScale = Offset.zero,
       this.scale = Size.zero,
       this.displayName,
@@ -39,6 +40,9 @@ class WindowState {
       : assert(scale != null, 'Scale must not be null!'),
         assert(offsetScale != null, 'OffsetScale must not be nulL!'),
         assert(size != null, 'Size must not be null!'),
+        assert(move != null, 'Move must not be null!'),
+        assert(resizeWidth != null, 'resizeWidth must not be null!'),
+        assert(resizeHeight != null, 'resizeHeight must not be null!'),
         builder = builder ??
             ((context) => Container(
                   alignment: Alignment.center,

@@ -5,8 +5,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:graph_translator/state/graph_directed.dart';
+import 'package:graph_translator/widgets/widget_components.dart';
 import 'package:graph_translator/widgets/widget_graph.dart';
 import 'package:graph_translator/widgets/widget_info.dart';
+import 'package:graph_translator/widgets/widget_protobar.dart';
 import 'package:graph_translator/widgets/widget_reset.dart';
 import 'package:graph_translator/widgets/widget_time_controller.dart';
 import 'package:graph_translator/widgets/widget_zoom.dart';
@@ -40,9 +42,11 @@ class RouteHomeState extends State<RouteHome> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
+      appBar: ProtoBar(),
       body: WindowController(
           key: key,
           initialStates: {
+            /*
             'time': WindowState(
               builder: (context) =>
                   WidgetTimeController(controller: controller),
@@ -73,10 +77,24 @@ class RouteHomeState extends State<RouteHome> {
             'info': WindowState(
               builder: (context) => WidgetInfo(),
               displayName: 'Info',
-              scale: Size(0.5, 0.5),
-              //offsetScale: Offset(0.5, 0.5),
+              scale: Size(0.2, 1.0),
+              resizeHeight: false,
+              resizeWidth: false,
+              move: false,
+              offsetScale: Offset(0.8, 0.0),
               type: WindowType.Open,
+            ),
+            'structure': WindowState(
+              builder: (context) => WidgetComponents(
+                component: controller.graph,
+              ),
+              displayName: 'Structure',
+              resizeHeight: false,
+              resizeWidth: false,
+              move: false,
+              scale: Size(0.3, 1.0),
             )
+            */
           },
           child: LayoutBuilder(
             builder: (context, constraints) => Stack(
