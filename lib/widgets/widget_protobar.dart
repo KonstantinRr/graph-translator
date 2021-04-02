@@ -47,6 +47,10 @@ class ProtoBarManagerState extends State<ProtoBarManager> {
     return ctx;
   }
 
+  void animateTo(ProtoBarValue key) {
+    event.addEvent(ProtoBarEvent(key));
+  }
+
   void regiserOffset(ProtoBarValue key, Pair<Offset, Size> value) {
     var newMap = offsetMap.lastEvent.map((key, value) => MapEntry(key, value));
     newMap[key] = value;
@@ -97,7 +101,7 @@ class SelectionAnimatorState extends State<SelectionAnimator>
   void initState() {
     super.initState();
     controller = AnimationController(
-      duration: Duration(milliseconds: 500),
+      duration: Duration(milliseconds: 100),
       vsync: this,
     );
   }
@@ -108,50 +112,36 @@ class SelectionAnimatorState extends State<SelectionAnimator>
 
     var state = ProtoBarManagerState.of(context);
     combinedStream = CombinedStream([state.offsetMap, state.event]);
-    setStopped(combinedStream.lastEvent);
+    setStopped(getFromList(combinedStream.lastEvent));
 
-    /*
+    
     subscription = combinedStream.stream.listen((event) {
-      var pair = state.offsetMap[event.value];
-      assert(pair != null, 'Value must exist in OffsetMap');
       setState(() {
-        var curve = CurvedAnimation(
-          curve: Curves.easeInOutQuad,
-          parent: controller,
-        );
-        size = Tween(begin: size.value, end: pair.t2.width).animate(curve);
-        offset = Tween(begin: offset.value, end: pair.t1.dx).animate(curve);
-        controller.reset();
-        controller.forward();
+        var pair = getFromList(event);
+        setMoving(pair);
       });
     });
-    */
   }
 
-  Pair getFromList(List event) {
-    var key = (event[1] as ProtoBarEvent);
+  Pair<Offset, Size> getFromList(List event) {
+    var key = (event[1] as ProtoBarEvent).value;
     return (event[0] as Map<ProtoBarValue, Pair<Offset, Size>>)[key];
   }
 
-  void setStopped(List event) {
-    var key = (event[1] as ProtoBarEvent);
-    var value = (event[0] as Map<ProtoBarValue, Pair<Offset, Size>>)[key];
-
+  void setStopped(Pair<Offset, Size> value) {
     offset = AlwaysStoppedAnimation<double>(value.t1.dx);
     size = AlwaysStoppedAnimation<double>(value.t2.width);
   }
 
-  void setMoving(List event) {
-    /*
+  void setMoving(Pair<Offset, Size> value) {
     var curve = CurvedAnimation(
-      curve: Curves.easeInOutQuad,
+      curve: Curves.easeInOut,
       parent: controller,
     );
-    size = Tween(begin: size.value, end: pair.t2.width).animate(curve);
-    offset = Tween(begin: offset.value, end: pair.t1.dx).animate(curve);
+    size = Tween(begin: size.value, end: value.t2.width).animate(curve);
+    offset = Tween(begin: offset.value, end: value.t1.dx).animate(curve);
     controller.reset();
     controller.forward();
-    */
   }
 
   @override
@@ -170,7 +160,7 @@ class SelectionAnimatorState extends State<SelectionAnimator>
         animation: controller,
         builder: (context, _) => CustomPaint(
           painter:
-              SelectionAnimatorPainter(Colors.black, size.value, offset.value),
+              SelectionAnimatorPainter(Colors.black, offset.value, size.value),
         ),
       ),
     );
@@ -188,7 +178,7 @@ class RegisterSizeWidget extends StatelessWidget {
       Key key})
       : super(key: key);
 
-  Future<void> register(BuildContext context) async {
+  void register(BuildContext context) {
     var parentBox = parent.currentContext.findRenderObject();
     var box = context.findRenderObject() as RenderBox;
     var state = ProtoBarManagerState.of(context);
@@ -199,7 +189,9 @@ class RegisterSizeWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    register(context);
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      register(context);
+    });
     return child;
   }
 }
@@ -212,53 +204,62 @@ class ProtoBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('Build');
     return ProtoBarManager(
-      child: Container(
-        color: Colors.white,
-        height: height,
-        width: double.infinity,
-        key: parentKey,
-        child: Stack(
-          alignment: Alignment.center,
-          children: <Widget>[
-            Row(children: <Widget>[
-              IconButton(
-                icon: Icon(Icons.menu),
-                color: Colors.grey,
-                onPressed: () {},
-              ),
-              IconButton(
-                icon: Icon(Icons.home),
-                color: Colors.grey,
-                onPressed: () {},
-              ),
-              RegisterSizeWidget(
-                registerKey: ProtoBarValue.Design,
-                parent: parentKey,
-                child: TextButton(
-                  onPressed: () {},
-                  child: Text('Design'),
+      child: Builder(
+        builder: (context) {
+          return Container(
+            color: Colors.white,
+            height: height,
+            width: double.infinity,
+            child: Stack(
+              key: parentKey,
+              alignment: Alignment.center,
+              children: <Widget>[
+                Row(children: <Widget>[
+                  IconButton(
+                    icon: Icon(Icons.menu),
+                    color: Colors.grey,
+                    onPressed: () {},
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.home),
+                    color: Colors.grey,
+                    onPressed: () {},
+                  ),
+                  RegisterSizeWidget(
+                    registerKey: ProtoBarValue.Design,
+                    parent: parentKey,
+                    child: TextButton(
+                      onPressed: () {
+                        var state = ProtoBarManagerState.of(context);
+                        state.animateTo(ProtoBarValue.Design);
+                      },
+                      child: Text('Design'),
+                    ),
+                  ),
+                  RegisterSizeWidget(
+                    registerKey: ProtoBarValue.Prototype,
+                    parent: parentKey,
+                    child: TextButton(
+                      onPressed: () {
+                        var state = ProtoBarManagerState.of(context);
+                        state.animateTo(ProtoBarValue.Prototype);
+                      },
+                      child: Text('Prototype'),
+                    ),
+                  ),
+                ]),
+                Positioned(
+                  bottom: 0.0,
+                  height: 2.0,
+                  left: 0.0,
+                  right: 0.0,
+                  child: SelectionAnimator(),
                 ),
-              ),
-              RegisterSizeWidget(
-                registerKey: ProtoBarValue.Prototype,
-                parent: parentKey,
-                child: TextButton(
-                  onPressed: () {},
-                  child: Text('Prototype'),
-                ),
-              ),
-            ]),
-            Positioned(
-              bottom: 0.0,
-              height: 2.0,
-              left: 0.0,
-              right: 0.0,
-              child: SelectionAnimator(),
-            ),
-          ],
-        ),
+              ],
+            )
+          );
+        }
       ),
     );
   }

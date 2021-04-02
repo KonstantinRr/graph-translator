@@ -19,11 +19,11 @@ abstract class LastAccessibleStream<T> {
 
 class CombinedStream extends LastAccessibleStream<List> {
   final List<EventController> controllers;
-  final _outController = StreamController.broadcast();
+  final _outController = StreamController<List>.broadcast();
   List<StreamSubscription> subscriptions;
 
   CombinedStream(this.controllers) {
-    subscriptions = mapIndexed(
+    subscriptions = mapIndexed<StreamSubscription, EventController>(
       controllers,
       (idx, stream) => stream.stream.listen(
         (event) {
@@ -32,7 +32,7 @@ class CombinedStream extends LastAccessibleStream<List> {
           _outController.add(lastStateList);
         },
       ),
-    );
+    ).toList();
   }
 
   List get lastEvent => controllers.map((e) => e.lastEvent).toList();
