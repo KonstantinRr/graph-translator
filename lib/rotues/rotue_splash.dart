@@ -15,7 +15,7 @@ class RouteSplash extends StatefulWidget {
   const RouteSplash({
     this.destination = '/',
     this.skip = true,
-    Key key,
+    Key? key,
     this.delay = const Duration(milliseconds: 700),
   }) : super(key: key);
 

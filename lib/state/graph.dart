@@ -11,7 +11,7 @@ abstract class SuperComponent extends Component {}
 class ListenerHandler {
   dynamic listenerData;
 
-  void notifyListeners(Component component) {
+  void notifyListeners(Component? component) {
     if (listenerData is void Function(Component))
       listenerData(component);
     else if (listenerData is List) listenerData.forEach((e) => e(component));
@@ -41,9 +41,9 @@ class ListenerHandler {
 
 abstract class Component extends ListenerHandler {
   final UniqueKey key = UniqueKey();
-  Component parent;
+  Component? parent;
 
-  void notify([Component src]) {
+  void notify([Component? src]) {
     notifyListeners(src);
     parent?.notify(src ?? this);
   }
@@ -64,21 +64,21 @@ mixin Input {
 }
 
 class InputValue {
-  ComponentConnector connected;
+  ComponentConnector? connected;
 }
 
 class NamedInput extends InputValue {}
 
 class AnyInput extends InputValue {
-  List<Input> inputs;
+  List<Input>? inputs;
 
-  void addInput(Input input) {
-    inputs.add(input);
+  void addInput(Input? input) {
+    inputs?.add(input as Input);
   }
 }
 
-mixin ComponentConnector on Component {
-  ComponentObject p1, p2;
+class ComponentConnector {
+  ComponentObject? p1, p2;
 
   void setComponents(ComponentObject p1, ComponentObject p2) {
     this.p1 = p1;
@@ -95,8 +95,8 @@ mixin UndirectedComponentConnector on ComponentConnector {
 }
 
 mixin DirectedComponentConnector on ComponentConnector {
-  ComponentObject get source => p1;
-  ComponentObject get destination => p2;
+  ComponentObject? get source => p1;
+  ComponentObject? get destination => p2;
 
   bool operator ==(o) =>
       o is UndirectedComponentConnector && p1 == p2 || p2 == p1;
@@ -106,14 +106,14 @@ mixin DirectedComponentConnector on ComponentConnector {
 
 mixin ComponentObject {
   /// Stores the coordinates
-  double x, y;
+  double x = 0.0, y = 0.0;
 
   void setCoords(double x, double y) {
     this.x = x;
     this.y = y;
   }
 
-  void randPosition([Rect region, math.Random rand]) {
+  void randPosition([Rect? region, math.Random? rand]) {
     rand ??= math.Random();
     region ??= Rect.fromLTWH(-300, -300, 600, 600);
     x = rand.nextDouble() * region.width + region.left;

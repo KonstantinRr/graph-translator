@@ -15,7 +15,7 @@ class WidgetSingleComponent extends StatefulWidget {
   final Component component;
   final int initialLength;
   const WidgetSingleComponent(
-      {@required this.component, this.initialLength = 16, Key key})
+      {required this.component, this.initialLength = 16, Key? key})
       : super(key: key);
 
   @override
@@ -23,8 +23,9 @@ class WidgetSingleComponent extends StatefulWidget {
 }
 
 class WidgetSingleComponentState extends State<WidgetSingleComponent> {
-  WidgetComponentsState state;
-  int currentMaxLength;
+  late WidgetComponentsState state;
+  late int currentMaxLength;
+
   static const elementsMinLength = 5;
   static const elementsMaxLength = 100;
   static const addSize = 10, decreaseSize = 10;
@@ -38,7 +39,7 @@ class WidgetSingleComponentState extends State<WidgetSingleComponent> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    state = WidgetComponentsState.of(context);
+    state = WidgetComponentsState.of(context) as WidgetComponentsState;
     state.map[widget.component] = () => setState(() {});
   }
 
@@ -137,19 +138,18 @@ class WidgetSingleComponentState extends State<WidgetSingleComponent> {
 
 class WidgetComponents extends StatefulWidget {
   final Component component;
-  const WidgetComponents({@required this.component, Key key}) : super(key: key);
+  const WidgetComponents({required this.component, Key? key}) : super(key: key);
 
   @override
   WidgetComponentsState createState() => WidgetComponentsState();
 }
 
 class WidgetComponentsState extends State<WidgetComponents> {
-  Map<Component, void Function()> map;
+  final map = <Component, void Function()>{};
 
   @override
   void initState() {
     super.initState();
-    map = {};
     widget.component.addListener(listener);
   }
 
@@ -167,7 +167,7 @@ class WidgetComponentsState extends State<WidgetComponents> {
     if (value != null) value();
   }
 
-  static WidgetComponentsState of(BuildContext context, {bool require = true}) {
+  static WidgetComponentsState? of(BuildContext context, {bool require = true}) {
     var state = context.findAncestorStateOfType<WidgetComponentsState>();
     assert(!require || state != null, 'WidgetComponentsState must not be null');
     return state;

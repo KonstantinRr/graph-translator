@@ -5,18 +5,19 @@ import 'package:graph_translator/state_events.dart';
 import 'package:graph_translator/state_manager.dart';
 
 class WidgetInfo extends StatelessWidget {
-  const WidgetInfo({Key key}) : super(key: key);
+  const WidgetInfo({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    var state = StateManagerProvider.of(context);
+    var state = StateManagerProvider.of(context)
+      as StateManagerProvider;
     return Container(
       width: 200.0,
       height: 500.0,
       child: Scrollbar(
         child: SingleChildScrollView(
           child: EventStreamBuilder<Component>(
-            controller: state.selected,
+            controller: state.state.selected,
             builder: (context, comp) {
               return Text('$comp');
             },

@@ -4,12 +4,12 @@ import 'package:graph_translator/state/graph.dart';
 class UndirectedNode extends Component with ComponentObject {
   List<UndirectedEdge> edges;
 
-  UndirectedNode({double x, double y, List<UndirectedEdge> edges})
+  UndirectedNode({required double x, required double y, List<UndirectedEdge>? edges})
       : edges = edges ?? [] {
     setCoords(x, y);
   }
 
-  UndirectedNode.random([List<UndirectedEdge> edges]) : edges = edges ?? [] {
+  UndirectedNode.random([List<UndirectedEdge>? edges]) : edges = edges ?? [] {
     randPosition();
   }
 
@@ -18,9 +18,12 @@ class UndirectedNode extends Component with ComponentObject {
       edges.indexWhere((element) => element.p1 == nd || element.p2 == nd);
 
   /// Returns the edge idx that connects this to nd
-  UndirectedEdge edgeTo(UndirectedNode nd) =>
-      edges.firstWhere((element) => element.p1 == nd || element.p2 == nd,
-          orElse: () => null);
+  UndirectedEdge? edgeTo(UndirectedNode nd) {
+    for (var element in edges)
+      if (element.p1 == nd || element.p2 == nd)
+        return element;
+    return null;
+  }
 
   @override
   void read(Map<String, dynamic> map) {}
@@ -52,7 +55,7 @@ class UndirectedUnweightedEdge extends UndirectedEdge {
 class UndirectedWeightedEdge extends UndirectedEdge {
   Fraction weight;
   UndirectedWeightedEdge(UndirectedNode v1, UndirectedNode v2,
-      [Fraction weight])
+      [Fraction? weight])
       : weight = weight ?? Fraction(1) {
     setComponents(v1, v2);
   }
@@ -69,14 +72,15 @@ class UndirectedWeightedEdge extends UndirectedEdge {
 }
 
 class GraphUndirected extends SuperComponent {
-  List<UndirectedNode> nodes;
+  List<UndirectedNode> nodes = [];
 
   bool addEdge(UndirectedEdge edge, {bool replace = true}) {
     if (!(edge.p1 is UndirectedNode) || !(edge.p2 is UndirectedNode))
       throw FormatException('Edge must point to instance of UndirectedNode');
-    UndirectedNode p1 = edge.p1, p2 = edge.p2;
-    var nd1Idx = p1.edgeIdxTo(edge.p2);
-    var nd2Idx = p2.edgeIdxTo(edge.p1);
+    UndirectedNode p1 = edge.p1 as UndirectedNode,
+      p2 = edge.p2 as UndirectedNode;
+    var nd1Idx = p1.edgeIdxTo(p2);
+    var nd2Idx = p2.edgeIdxTo(p1);
 
     if (nd1Idx != -1) {
       if (replace) p1.edges[nd1Idx] = edge;
@@ -100,6 +104,6 @@ class GraphUndirected extends SuperComponent {
   Map<String, dynamic> toJson() => {
         'type': typeToString<GraphUndirected>(),
         'parent': super.toJson(),
-        'nodes': nodes?.map((e) => e.toJson())?.toList(),
+        'nodes': nodes.map((e) => e.toJson()).toList(),
       };
 }

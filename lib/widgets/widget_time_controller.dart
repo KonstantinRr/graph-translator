@@ -10,7 +10,7 @@ import 'package:graph_translator/widgets/widget_graph.dart';
 
 class WidgetTimeController extends StatefulWidget {
   final GraphController controller;
-  const WidgetTimeController({@required this.controller, Key key})
+  const WidgetTimeController({required this.controller, Key? key})
       : super(key: key);
 
   @override
@@ -18,8 +18,8 @@ class WidgetTimeController extends StatefulWidget {
 }
 
 class TimeControllerState extends State<WidgetTimeController> {
-  TextEditingController stepText;
-  Timer periodic;
+  late final TextEditingController stepText;
+  Timer? periodic;
 
   @override
   void initState() {
@@ -44,6 +44,7 @@ class TimeControllerState extends State<WidgetTimeController> {
     periodic = Timer.periodic(Duration(milliseconds: 200), (t) {
       widget.controller.updateGraphState((g) {
         //g.simulatePositions(1);
+        return g;
       });
     });
   }

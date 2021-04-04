@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:graph_translator/state_events.dart';
+import 'package:graph_translator/widgets/widget_time_controller.dart';
 
 class Pair<T1, T2> {
   final T1 t1;
@@ -11,48 +12,59 @@ class Pair<T1, T2> {
   const Pair(this.t1, this.t2);
 }
 
-enum ProtoBarValue { Design, Prototype }
+enum _ProtoBarValue { Design, Prototype }
 
-class ProtoBarEvent {
-  final ProtoBarValue value;
-  const ProtoBarEvent(this.value);
+class _ProtoBarEvent {
+  final _ProtoBarValue value;
+  const _ProtoBarEvent(this.value);
 }
 
-class ProtoBarManager extends StatefulWidget {
+enum _ProtoBarState { Open, Close }
+
+
+class _ProtoBarManager extends StatefulWidget {
   final Widget child;
-  const ProtoBarManager({@required this.child, Key key}) : super(key: key);
+  const _ProtoBarManager({required this.child, Key? key}) : super(key: key);
 
   @override
-  ProtoBarManagerState createState() => ProtoBarManagerState();
+  _ProtoBarManagerState createState() => _ProtoBarManagerState();
 }
 
-class ProtoBarManagerState extends State<ProtoBarManager> {
+class _ProtoBarManagerState extends State<_ProtoBarManager> {
   final event =
-      EventController<ProtoBarEvent>(ProtoBarEvent(ProtoBarValue.Design));
+      EventController<_ProtoBarEvent>(_ProtoBarEvent(_ProtoBarValue.Design));
   final offsetMap =
-      EventController<Map<ProtoBarValue, Pair<Offset, Size>>>(const {
-    ProtoBarValue.Design: Pair(Offset.zero, Size.zero),
-    ProtoBarValue.Prototype: Pair(Offset.zero, Size.zero),
+      EventController<Map<_ProtoBarValue, Pair<Offset, Size>>>(const {
+    _ProtoBarValue.Design: Pair(Offset.zero, Size.zero),
+    _ProtoBarValue.Prototype: Pair(Offset.zero, Size.zero),
   });
+  final state = EventController<_ProtoBarState>(_ProtoBarState.Open);
 
   @override
   void dispose() {
     event.dispose();
+    offsetMap.dispose();
+    state.dispose();
     super.dispose();
   }
 
-  static ProtoBarManagerState of(BuildContext context, {bool require = true}) {
-    var ctx = context.findAncestorStateOfType<ProtoBarManagerState>();
+  static _ProtoBarManagerState? of(BuildContext context, {bool require = true}) {
+    var ctx = context.findAncestorStateOfType<_ProtoBarManagerState>();
     assert(!require || ctx != null, 'ProtoBarManagerState must not be null');
     return ctx;
   }
 
-  void animateTo(ProtoBarValue key) {
-    event.addEvent(ProtoBarEvent(key));
+  void animateTo(_ProtoBarValue key) {
+    event.addEvent(_ProtoBarEvent(key));
   }
 
-  void regiserOffset(ProtoBarValue key, Pair<Offset, Size> value) {
-    var newMap = offsetMap.lastEvent.map((key, value) => MapEntry(key, value));
+  void setBarState(_ProtoBarState newState) {
+    state.addEvent(newState);
+  }
+
+  void regiserOffset(_ProtoBarValue key, Pair<Offset, Size> value) {
+    var newMap = (offsetMap.lastEvent as Map<_ProtoBarValue, Pair<Offset, Size>>)
+      .map((key, value) => MapEntry(key, value));
     newMap[key] = value;
     offsetMap.addEvent(newMap);
   }
@@ -61,10 +73,10 @@ class ProtoBarManagerState extends State<ProtoBarManager> {
   Widget build(BuildContext context) => widget.child;
 }
 
-class SelectionAnimatorPainter extends CustomPainter {
+class _SelectionAnimatorPainter extends CustomPainter {
   final Color color;
   final double value, length;
-  const SelectionAnimatorPainter(this.color, this.value, this.length);
+  const _SelectionAnimatorPainter(this.color, this.value, this.length);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -84,18 +96,19 @@ class SelectionAnimatorPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
-class SelectionAnimator extends StatefulWidget {
-  const SelectionAnimator({Key key}) : super(key: key);
+class _SelectionAnimator extends StatefulWidget {
+  final Color color;
+  const _SelectionAnimator({required this.color, Key? key}) : super(key: key);
   @override
-  SelectionAnimatorState createState() => SelectionAnimatorState();
+  _SelectionAnimatorState createState() => _SelectionAnimatorState();
 }
 
-class SelectionAnimatorState extends State<SelectionAnimator>
+class _SelectionAnimatorState extends State<_SelectionAnimator>
     with SingleTickerProviderStateMixin {
-  StreamSubscription subscription;
-  CombinedStream combinedStream;
-  AnimationController controller;
-  Animation<double> size, offset;
+  StreamSubscription? subscription;
+  CombinedStream? combinedStream;
+  late final AnimationController controller;
+  late Animation<double> size, offset;
 
   @override
   void initState() {
@@ -106,16 +119,22 @@ class SelectionAnimatorState extends State<SelectionAnimator>
     );
   }
 
+  void clearState() {
+    subscription?.cancel();
+    combinedStream?.dispose();
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    var state = ProtoBarManagerState.of(context);
-    combinedStream = CombinedStream([state.offsetMap, state.event]);
-    setStopped(getFromList(combinedStream.lastEvent));
+    clearState();
 
-    
-    subscription = combinedStream.stream.listen((event) {
+    var state = _ProtoBarManagerState.of(context) as _ProtoBarManagerState;
+    combinedStream = CombinedStream([state.offsetMap, state.event]);
+    setStopped(getFromList(combinedStream?.lastEvent));
+
+    subscription = combinedStream?.stream.listen((event) {
       setState(() {
         var pair = getFromList(event);
         setMoving(pair);
@@ -123,9 +142,11 @@ class SelectionAnimatorState extends State<SelectionAnimator>
     });
   }
 
-  Pair<Offset, Size> getFromList(List event) {
-    var key = (event[1] as ProtoBarEvent).value;
-    return (event[0] as Map<ProtoBarValue, Pair<Offset, Size>>)[key];
+  Pair<Offset, Size> getFromList(List? event) {
+    assert(event != null, 'Event must not be null');
+
+    var key = ((event as List)[1] as _ProtoBarEvent).value;
+    return (event[0] as Map<_ProtoBarValue, Pair<Offset, Size>>)[key] as Pair<Offset, Size>;
   }
 
   void setStopped(Pair<Offset, Size> value) {
@@ -146,7 +167,7 @@ class SelectionAnimatorState extends State<SelectionAnimator>
 
   @override
   void dispose() {
-    subscription.cancel();
+    clearState();
     controller.dispose();
     super.dispose();
   }
@@ -160,7 +181,7 @@ class SelectionAnimatorState extends State<SelectionAnimator>
         animation: controller,
         builder: (context, _) => CustomPaint(
           painter:
-              SelectionAnimatorPainter(Colors.black, offset.value, size.value),
+              _SelectionAnimatorPainter(widget.color, offset.value, size.value),
         ),
       ),
     );
@@ -168,98 +189,208 @@ class SelectionAnimatorState extends State<SelectionAnimator>
 }
 
 class RegisterSizeWidget extends StatelessWidget {
-  final ProtoBarValue registerKey;
+  final _ProtoBarValue registerKey;
   final Widget child;
   final GlobalKey parent;
   const RegisterSizeWidget(
-      {@required this.registerKey,
-      @required this.child,
-      @required this.parent,
-      Key key})
+      {required this.registerKey,
+      required this.child,
+      required this.parent,
+      Key? key})
       : super(key: key);
 
   void register(BuildContext context) {
-    var parentBox = parent.currentContext.findRenderObject();
+    var parentBox = parent.currentContext?.findRenderObject();
     var box = context.findRenderObject() as RenderBox;
-    var state = ProtoBarManagerState.of(context);
+    var state = _ProtoBarManagerState.of(context);
     var offset = box.localToGlobal(Offset.zero, ancestor: parentBox);
 
-    state.regiserOffset(registerKey, Pair(offset, box.size));
+    state?.regiserOffset(registerKey, Pair(offset, box.size));
   }
 
   @override
   Widget build(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+    WidgetsBinding.instance?.addPostFrameCallback((timeStamp) {
       register(context);
     });
     return child;
   }
 }
 
-class ProtoBar extends StatelessWidget implements PreferredSizeWidget {
-  final GlobalKey parentKey = GlobalKey();
-  final double height;
+class ProtoBar extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return _ProtoBarManager(
+      child: Container(
+        color: Colors.white,
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch, 
+            children: [
+              Row(
+                children: [
+                  Expanded(child: _ProtoBarHeader(),),
+                  _ProtoBarContentHeader(),
+                  _ProtoBarStateButton(),
+                ],
+              ),
+              _ProtoBarContent(),
+            ],
+          ),
+        ),
+      )
+    );
+  }
+}
 
-  ProtoBar({this.height = kToolbarHeight, Key key}) : super(key: key);
+class _ProtoBarStateButton extends StatelessWidget {
+  const _ProtoBarStateButton({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return ProtoBarManager(
-      child: Builder(
-        builder: (context) {
-          return Container(
-            color: Colors.white,
-            height: height,
-            width: double.infinity,
-            child: Stack(
-              key: parentKey,
-              alignment: Alignment.center,
-              children: <Widget>[
-                Row(children: <Widget>[
-                  IconButton(
-                    icon: Icon(Icons.menu),
-                    color: Colors.grey,
-                    onPressed: () {},
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.home),
-                    color: Colors.grey,
-                    onPressed: () {},
-                  ),
-                  RegisterSizeWidget(
-                    registerKey: ProtoBarValue.Design,
-                    parent: parentKey,
-                    child: TextButton(
-                      onPressed: () {
-                        var state = ProtoBarManagerState.of(context);
-                        state.animateTo(ProtoBarValue.Design);
-                      },
-                      child: Text('Design'),
-                    ),
-                  ),
-                  RegisterSizeWidget(
-                    registerKey: ProtoBarValue.Prototype,
-                    parent: parentKey,
-                    child: TextButton(
-                      onPressed: () {
-                        var state = ProtoBarManagerState.of(context);
-                        state.animateTo(ProtoBarValue.Prototype);
-                      },
-                      child: Text('Prototype'),
-                    ),
-                  ),
-                ]),
-                Positioned(
-                  bottom: 0.0,
-                  height: 2.0,
-                  left: 0.0,
-                  right: 0.0,
-                  child: SelectionAnimator(),
-                ),
-              ],
-            )
-          );
+    var provider = _ProtoBarManagerState.of(context)
+      as _ProtoBarManagerState;
+    return EventStreamBuilder<_ProtoBarState>(
+      controller: provider.state,
+      builder: (context, data) {
+        switch (data) {
+          case _ProtoBarState.Open:
+            return IconButton(
+              icon: Icon(Icons.arrow_upward),
+              onPressed: () =>
+                provider.setBarState(_ProtoBarState.Close),
+            );
+          case _ProtoBarState.Close:
+            return IconButton(
+              icon: Icon(Icons.arrow_downward),
+              onPressed: () =>
+                provider.setBarState(_ProtoBarState.Open),
+            );
         }
+      },
+    );
+  }
+}
+
+class _ProtoBarContentHeader extends StatelessWidget {
+  const _ProtoBarContentHeader({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        //WidgetTimeController(),
+        IconButton(
+          icon: Icon(Icons.text_fields),
+          onPressed: () { },
+        )
+      ],
+    );
+  }
+}
+
+class _ProtoBarContent extends StatefulWidget {
+  const _ProtoBarContent({Key? key}) : super(key: key);
+
+  @override
+  _ProtoBarContentState createState() => _ProtoBarContentState();
+}
+
+class _ProtoBarContentState extends State<_ProtoBarContent> 
+  with SingleTickerProviderStateMixin {
+  late final AnimationController controller;
+  late StreamSubscription subscription;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = AnimationController(
+      duration: Duration(milliseconds: 500),
+      vsync: this,
+    );
+  }
+
+  void clearState() {
+    //subscription.cancel();
+  }
+
+  @override
+  void dispose() {
+    clearState();
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container();
+  }
+}
+
+class _ProtoBarHeader extends StatelessWidget implements PreferredSizeWidget {
+  final GlobalKey parentKey = GlobalKey();
+  final double height;
+
+  _ProtoBarHeader({this.height = kToolbarHeight, Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    var style = Theme.of(context).textTheme.button?.copyWith(color: Colors.grey[800]);
+    return SizedBox(
+      height: height,
+      width: double.infinity,
+      child: Stack(
+        key: parentKey,
+        alignment: Alignment.center,
+        children: <Widget>[
+          Row(children: <Widget>[
+            IconButton(
+              icon: Icon(Icons.menu),
+              color: Colors.grey,
+              onPressed: () {},
+            ),
+            IconButton(
+              icon: Icon(Icons.home),
+              color: Colors.grey,
+              onPressed: () {},
+            ),
+            RegisterSizeWidget(
+              registerKey: _ProtoBarValue.Design,
+              parent: parentKey,
+              child: TextButton(
+                onPressed: () {
+                  var state = _ProtoBarManagerState.of(context)
+                    as _ProtoBarManagerState;
+                  state.animateTo(_ProtoBarValue.Design);
+                },
+                child: Text('Design', style: style,),
+              ),
+            ),
+            RegisterSizeWidget(
+              registerKey: _ProtoBarValue.Prototype,
+              parent: parentKey,
+              child: TextButton(
+                onPressed: () {
+                  var state = _ProtoBarManagerState.of(context)
+                    as _ProtoBarManagerState;
+                  state.animateTo(_ProtoBarValue.Prototype);
+                },
+                child: Text('Prototype', style: style,),
+              ),
+            ),
+          ]),
+          Positioned(
+            bottom: 0.0,
+            height: 2.0,
+            left: 0.0,
+            right: 0.0,
+            child: _SelectionAnimator(
+              color: Colors.grey[400] as Color,
+            ),
+          ),
+        ],
       ),
     );
   }

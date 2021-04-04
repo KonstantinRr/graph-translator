@@ -11,7 +11,7 @@ abstract class SizeObject with IterableMixin<double>{
     _data = Float32List(size);
   /// Creates a new SizeObject of the given size filling it with
   /// random values. The optional RNG is used, if specified.
-  SizeObject.random(int size, [math.Random rand]) :
+  SizeObject.random(int size, [math.Random? rand]) :
     _data = Float32List(size) {
     rand ??= math.Random();
     for (var i = 0; i < dimension; i++)
@@ -65,11 +65,11 @@ class Vector extends SizeObject{
         '${n1.length}:${n2.length}');
   }
 
-  Vector applyOperator(Object n, double Function(double, double) func) {
+  Vector applyOperator(n, double Function(double, double) func) {
     var vec = Vector.copy(this);
     if (n is num) {
       for (var i = 0; i < _data.length; i++)
-        vec._data[i] = func(vec._data[i], n);
+        vec._data[i] = func(vec._data[i], n as double);
     } else if (n is Vector) {
       _checkLength(this, n);
       for (var i = 0; i < _data.length; i++)
@@ -116,7 +116,7 @@ class Matrix extends SizeObject with IterableMixin<double> {
     _width = mat.width, _height = mat.height,
     super.copy(mat);
 
-  Matrix.random(int width, int height, [math.Random rand]) :
+  Matrix.random(int width, int height, [math.Random? rand]) :
     _width = width, _height = height,
     super.random(width * height);
 
@@ -202,10 +202,10 @@ class Matrix extends SizeObject with IterableMixin<double> {
   }
 
   Vector multiplyVector(Vector vec) {
-    return null;
+    return Vector(3);
   }
 
-  Matrix square() => this * this;
+  Matrix square() => (this * this) as Matrix;
 
   Matrix limit([int iterations = 5]) {
     Matrix lim = this;

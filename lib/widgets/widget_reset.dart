@@ -3,7 +3,7 @@ import 'package:graph_translator/widgets/widget_graph.dart';
 
 class WidgetGenerator extends StatefulWidget {
   final GraphController controller;
-  const WidgetGenerator({@required this.controller, Key key}) : super(key: key);
+  const WidgetGenerator({required this.controller, Key? key}) : super(key: key);
 
   @override
   WidgetGeneratorState createState() => WidgetGeneratorState();
@@ -16,11 +16,11 @@ class WidgetGeneratorState extends State<WidgetGenerator> {
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
-    var style = theme.textTheme.bodyText1.copyWith(color: Colors.black);
+    var style = theme.textTheme.bodyText1?.copyWith(color: Colors.black);
     return ElevatedButton(
       onPressed: () {
         widget.controller.updateGraphState((g) {
-          g.random(
+          return g..random(
               nodeCount: sliderNodes.round(),
               connectionCount: sliderEdges.round());
         });
@@ -36,7 +36,7 @@ class WidgetGeneratorState extends State<WidgetGenerator> {
             alignment: Alignment.center,
             child: Text(
               'Generate',
-              style: theme.textTheme.button.copyWith(color: Colors.black),
+              style: theme.textTheme.button?.copyWith(color: Colors.black),
             ),
           ),
           Row(
@@ -107,7 +107,7 @@ class WidgetGeneratorState extends State<WidgetGenerator> {
 
 class WidgetSimulate extends StatelessWidget {
   final GraphController controller;
-  const WidgetSimulate({@required this.controller, Key key}) : super(key: key);
+  const WidgetSimulate({required this.controller, Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -116,6 +116,7 @@ class WidgetSimulate extends StatelessWidget {
       onPressed: () {
         controller.updateGraphState((g) {
           //g.simulatePositions(1000);
+          return g;
         });
       },
       style: ElevatedButton.styleFrom(
@@ -127,7 +128,7 @@ class WidgetSimulate extends StatelessWidget {
         alignment: Alignment.center,
         child: Text(
           'Simulate',
-          style: theme.textTheme.button.copyWith(color: Colors.black),
+          style: theme.textTheme.button?.copyWith(color: Colors.black),
         ),
       ),
     );

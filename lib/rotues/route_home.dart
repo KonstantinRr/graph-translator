@@ -5,24 +5,56 @@
 
 import 'package:flutter/material.dart';
 import 'package:graph_translator/state/graph_directed.dart';
-import 'package:graph_translator/widgets/widget_components.dart';
 import 'package:graph_translator/widgets/widget_graph.dart';
-import 'package:graph_translator/widgets/widget_info.dart';
 import 'package:graph_translator/widgets/widget_protobar.dart';
-import 'package:graph_translator/widgets/widget_reset.dart';
-import 'package:graph_translator/widgets/widget_time_controller.dart';
-import 'package:graph_translator/widgets/widget_zoom.dart';
 import 'package:graph_translator/widgets/window_controller.dart';
 
+class GraphControllerProvider extends StatefulWidget {
+  final GraphController Function() creator;
+  final Widget child;
+  const GraphControllerProvider({required this.creator,
+    required this.child, Key? key}) : super(key: key);
+  
+  @override
+  GraphControllerProviderState createState() => GraphControllerProviderState();
+
+  static GraphController? of(BuildContext context, {bool require = true}) {
+    var ctx = context.findAncestorStateOfType<GraphControllerProviderState>();
+    assert(!require || ctx != null, 'ProtoBarManagerState must not be null');
+    return ctx?.controller;
+  }
+}
+
+class GraphControllerProviderState extends State<GraphControllerProvider> {
+  late final GraphController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = widget.creator();
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
+  }
+}
+
 class RouteHome extends StatefulWidget {
-  const RouteHome({Key key});
+  const RouteHome({Key? key});
 
   @override
   RouteHomeState createState() => RouteHomeState();
 }
 
 class RouteHomeState extends State<RouteHome> {
-  GraphController controller;
+  late final GraphController controller;
   GlobalKey<WindowControllerState> key = GlobalKey();
 
   @override
@@ -42,7 +74,6 @@ class RouteHomeState extends State<RouteHome> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      appBar: ProtoBar(),
       body: WindowController(
           key: key,
           initialStates: {
@@ -96,16 +127,28 @@ class RouteHomeState extends State<RouteHome> {
             )
             */
           },
-          child: LayoutBuilder(
-            builder: (context, constraints) => Stack(
-              fit: StackFit.expand,
-              children: <Widget>[
-                GraphWidget(
-                  controller: controller,
-                ),
-              ],
-            ),
-          )),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget> [
+              Expanded(child: LayoutBuilder(
+                builder: (context, constraints) => Stack(
+                  fit: StackFit.loose,
+                  children: <Widget>[
+                    Positioned.fill(
+                      child: GraphWidget(
+                        controller: controller,
+                      ),
+                    ),
+                    Positioned(
+                      top: 0.0, left: 0.0, right: 0.0,
+                      child: ProtoBar(),
+                    ),
+                  ],
+                ),),
+              )
+            ]
+          )
+        ),
     );
   }
 }

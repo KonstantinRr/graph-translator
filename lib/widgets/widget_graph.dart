@@ -81,7 +81,12 @@ class GraphPainter extends CustomPainter {
       }
       // render all edges to other nodes
       for (var edge in node.outEdges) {
-        canvas.drawLine(edge.source.offset, edge.destination.offset, edgePaint);
+        if (edge.source != null && edge.destination != null)
+          canvas.drawLine(
+            (edge.source as ComponentObject).offset,
+            (edge.destination as ComponentObject).offset,
+            edgePaint,
+          );
       }
     }
   }
@@ -94,13 +99,17 @@ class GraphPainter extends CustomPainter {
     canvas.translate(-translator.dx, -translator.dy);
     canvas.scale(translator.zoom);
 
-    if (state.graph is DirectedGraph) paintDirected(state.graph, canvas, size);
+    if (state.graph is DirectedGraph)
+      paintDirected(state.graph as DirectedGraph, canvas, size);
 
     if (state.source != null && state.destination != null) {
       var paint = Paint()
         ..color = Colors.blue.withOpacity(0.3)
         ..style = PaintingStyle.fill;
-      canvas.drawRect(Rect.fromPoints(state.source, state.destination), paint);
+      canvas.drawRect(Rect.fromPoints(
+        state.source as Offset,
+        state.destination as Offset
+      ), paint);
     }
 
     canvas.restore();
@@ -113,15 +122,15 @@ class GraphPainter extends CustomPainter {
 class GraphControllerState {
   final SuperComponent graph;
   final GraphTranslator translator;
-  final Offset source, destination;
+  final Offset? source, destination;
   const GraphControllerState(
       this.graph, this.translator, this.source, this.destination);
 
   GraphControllerState copyWith(
-      {SuperComponent graph,
-      GraphTranslator translator,
-      Nullable<Offset> source,
-      Nullable<Offset> destination}) {
+      {SuperComponent? graph,
+      GraphTranslator? translator,
+      Nullable<Offset>? source,
+      Nullable<Offset>? destination}) {
     return GraphControllerState(
         graph ?? this.graph,
         translator ?? this.translator,
@@ -136,7 +145,7 @@ class GraphControllerState {
 class GraphController {
   EventController<GraphControllerState> _controller;
 
-  GraphController({SuperComponent graph, GraphTranslator translator})
+  GraphController({SuperComponent? graph, GraphTranslator? translator})
       : _controller = EventController(GraphControllerState(
           graph ?? DirectedGraph(),
           GraphTranslator(),
@@ -145,20 +154,20 @@ class GraphController {
         ));
 
   Stream<GraphControllerState> get events => _controller.stream;
-  GraphControllerState get state => _controller.lastEvent;
+  GraphControllerState get state => _controller.lastEvent as GraphControllerState;
 
-  GraphTranslator get translator => _controller.lastEvent.translator;
-  DirectedGraph get graph => _controller.lastEvent.graph;
-  Offset get selectionSource => _controller.lastEvent.source;
-  Offset get selectionDestination => _controller.lastEvent.destination;
+  GraphTranslator get translator => _controller.lastEvent?.translator as GraphTranslator;
+  DirectedGraph get graph => _controller.lastEvent?.graph as DirectedGraph;
+  Offset? get selectionSource => _controller.lastEvent?.source;
+  Offset? get selectionDestination => _controller.lastEvent?.destination;
 
   set graph(DirectedGraph graph) =>
       _controller.addEvent(state.copyWith(graph: graph));
   set translator(GraphTranslator translator) =>
       _controller.addEvent(state.copyWith(translator: translator));
-  set selectionSource(Offset source) =>
+  set selectionSource(Offset? source) =>
       _controller.addEvent(state.copyWith(source: Nullable(source)));
-  set selectionDestination(Offset destination) =>
+  set selectionDestination(Offset? destination) =>
       _controller.addEvent(state.copyWith(destination: Nullable(destination)));
 
   void updateGraphState(DirectedGraph Function(DirectedGraph) func) =>
@@ -174,7 +183,7 @@ class GraphController {
 class GraphWidget extends StatelessWidget {
   final GraphController controller;
 
-  GraphWidget({@required this.controller, Key key}) : super(key: key);
+  GraphWidget({required this.controller, Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

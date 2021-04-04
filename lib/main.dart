@@ -20,23 +20,23 @@ void main() {
 }
 
 class Nullable<T> {
-  T _value;
+  T? _value;
 
   Nullable(this._value);
-  T get value => _value;
+  T? get value => _value;
 }
 
 class GraphTranslator extends StatelessWidget {
-  const GraphTranslator({Key key}) : super(key: key);
+  const GraphTranslator({Key? key}) : super(key: key);
 
   Route onGenerateRotue(RouteSettings settings) {
     switch (settings.name) {
       case 'splash':
         return MaterialPageRoute(builder: (context) => const RouteSplash());
       case '/':
+      default:
         return MaterialPageRoute(builder: (context) => const RouteHome());
     }
-    return null;
   }
 
   Route onGenerateUnknownRoute(RouteSettings settings) {
@@ -51,8 +51,10 @@ class GraphTranslator extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       debugShowMaterialGrid: false,
       initialRoute: '/',
-      builder: (context, child) => StateManagerWidget(child: child),
+      builder: (context, child) => StateManagerWidget(child: child as Widget),
       theme: ThemeData(
+        primaryColor: Colors.orange,
+        fontFamily: 'Inter',
         sliderTheme: SliderThemeData(
           valueIndicatorTextStyle: TextStyle(color: Colors.black),
         ),

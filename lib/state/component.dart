@@ -37,7 +37,7 @@ class ComponentNeg extends Component {}
 
 class Input {
   dynamic buffer;
-  Output connectedOutput;
+  Output? connectedOutput;
 
   bool allowInt() {
     return false;
@@ -58,5 +58,5 @@ class Input {
 
 class Output {
   dynamic buffer;
-  Input connectedInput;
+  Input? connectedInput;
 }

@@ -10,11 +10,10 @@ class WidgetLogo extends StatelessWidget {
   /// The widget's size
   final double size;
   /// The margin around the [Widget]
-  final EdgeInsets margin;
+  final EdgeInsets? margin;
 
   /// Creates a [WidgetLogo] using a [size] and [margin].
-  const WidgetLogo({@required this.size, this.margin, Key key}) :
-    assert(size != null, 'Size must not be null'),
+  const WidgetLogo({required this.size, this.margin, Key? key}) :
     super(key: key);
 
   @override

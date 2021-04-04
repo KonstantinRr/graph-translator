@@ -5,7 +5,7 @@ import 'package:graph_translator/state_events.dart';
 class EventParent {
   DateTime time;
 
-  EventParent([DateTime time]) : time = time ?? DateTime.now();
+  EventParent([DateTime? time]) : time = time ?? DateTime.now();
 }
 
 enum ConnectionStatus { Connected, Connecting, Disconnected, Unknown }
@@ -18,10 +18,10 @@ class ConnectionEvent extends EventParent {
 class StateManagerProvider extends InheritedWidget {
   final StateManagerWidgetState state;
 
-  StateManagerProvider({@required this.state, Widget child})
+  StateManagerProvider({required this.state, required Widget child})
       : super(child: child);
 
-  static StateManagerWidgetState of(BuildContext context,
+  static StateManagerWidgetState? of(BuildContext context,
       {bool require = true}) {
     var ctx =
         context.dependOnInheritedWidgetOfExactType<StateManagerProvider>();
@@ -38,7 +38,8 @@ class StateManagerProvider extends InheritedWidget {
 class StateManagerWidget extends StatefulWidget {
   final Widget child;
 
-  const StateManagerWidget({@required this.child, Key key}) : super(key: key);
+  const StateManagerWidget({required this.child,
+    Key? key}) : super(key: key);
 
   @override
   StateManagerWidgetState createState() => StateManagerWidgetState();

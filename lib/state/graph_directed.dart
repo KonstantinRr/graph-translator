@@ -13,15 +13,15 @@ class DirectedNode extends Component with ComponentObject {
   List<DirectedEdge> outEdges, inEdges;
 
   DirectedNode(
-      {List<DirectedEdge> outEdges,
-      List<DirectedEdge> inEdges,
-      double x,
-      double y})
+      {List<DirectedEdge>? outEdges,
+      List<DirectedEdge>? inEdges,
+      required double x,
+      required double y})
       : outEdges = outEdges ?? [],
         inEdges = inEdges ?? [] {
     setCoords(x, y);
   }
-  DirectedNode.random({List<DirectedEdge> outEdges, List<DirectedEdge> inEdges})
+  DirectedNode.random({List<DirectedEdge>? outEdges, List<DirectedEdge>? inEdges})
       : outEdges = outEdges ?? [],
         inEdges = inEdges ?? [] {
     randPosition();
@@ -36,12 +36,20 @@ class DirectedNode extends Component with ComponentObject {
       outEdges.indexWhere((element) => element.p2 == nd);
 
   /// Returns the edge that connects nd to this
-  DirectedEdge incomingEdgeFrom(DirectedNode nd) =>
-      inEdges.firstWhere((element) => element.p1 == nd, orElse: () => null);
+  DirectedEdge? incomingEdgeFrom(DirectedNode nd) {
+    for (var element in inEdges) {
+      if (element.p1 == nd) return element;
+    }
+    return null;
+  }
 
   /// Returns the edge that connects this to nd
-  DirectedEdge outgoingEdgeTo(DirectedNode nd) =>
-      outEdges.firstWhere((element) => element.p2 == nd, orElse: () => null);
+  DirectedEdge? outgoingEdgeTo(DirectedNode nd) {
+    for (var element in outEdges) {
+      if (element.p2 == nd) return element;
+    }
+    return null;
+  }
 
   @override
   void read(Map<String, dynamic> map) {}
@@ -59,7 +67,7 @@ class DirectedWeightedEdge extends DirectedEdge {
   Fraction weight;
 
   DirectedWeightedEdge(DirectedNode source, DirectedNode destination,
-      [Fraction weight])
+      [Fraction? weight])
       : weight = weight ?? Fraction(1) {
     setComponents(source, destination);
   }
@@ -81,25 +89,25 @@ class DirectedUnweightedEdge extends DirectedEdge {
   void read(Map<String, dynamic> map) {}
 
   @override
-  Map<String, dynamic> toJson() {}
+  Map<String, dynamic> toJson() => {};
 }
 
 class DirectedGraph<NodeType extends DirectedNode,
     EdgeType extends DirectedEdge> extends SuperComponent {
-  List<NodeType> nodes;
+  late List<NodeType> nodes;
 
-  DirectedGraph([List<NodeType> nodes]) : nodes = nodes ?? [];
-  DirectedGraph.example({int nodeCount, int connectionCount}) {
+  DirectedGraph([List<NodeType>? nodes]) : nodes = nodes ?? [];
+  DirectedGraph.example({int? nodeCount, int? connectionCount}) {
     random(nodeCount: nodeCount, connectionCount: connectionCount);
   }
 
   /// Creates a randomized graph with the given node and connection count.
   /// The default [nodeCount] is 10, the default [connectionCount] is 20
   void random(
-      {int nodeCount,
-      int connectionCount,
-      NodeType Function() nodeCreator,
-      EdgeType Function(NodeType, NodeType) edgeCreator}) {
+      {int? nodeCount,
+      int? connectionCount,
+      NodeType Function()? nodeCreator,
+      EdgeType Function(NodeType, NodeType)? edgeCreator}) {
     // The random object that is used in this function
     final rand = math.Random();
     // sets the default nodeCount and connectionCount
@@ -137,10 +145,11 @@ class DirectedGraph<NodeType extends DirectedNode,
   bool addEdge(EdgeType edge, {bool replace = true}) {
     if (!(edge is DirectedEdge))
       throw FormatException('Edge must be instance of DirectedEdge');
-    DirectedNode source = edge.source, destination = edge.destination;
+    DirectedNode source = edge.source as DirectedNode,
+      destination = edge.destination as DirectedNode;
 
-    var idxOut = source.outgoingEdgeIdxTo(edge.destination);
-    var idxIn = destination.incomingEdgeIdxFrom(edge.source);
+    var idxOut = source.outgoingEdgeIdxTo(destination);
+    var idxIn = destination.incomingEdgeIdxFrom(source);
     if (idxOut == -1 && idxIn != -1 || idxOut != -1 && idxIn == -1)
       throw Exception('Graph is in invalid state. Please fix');
 

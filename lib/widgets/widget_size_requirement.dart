@@ -13,15 +13,15 @@ import 'package:flutter/material.dart';
 /// 
 class WidgetSizeRequirement extends StatelessWidget {
   /// The minimum size requirements that are need to call [builder].
-  final double minWidth, minHeight;
+  final double? minWidth, minHeight;
   /// The default child builder if no constraints are violated
   final Widget Function(BuildContext, BoxConstraints) builder;
   /// The builder if the constraints are violated
   final Widget Function(BuildContext, BoxConstraints) minBuilder;
 
-  WidgetSizeRequirement({Key key,
-    Widget Function(BuildContext, BoxConstraints) minBuilder,
-    this.minWidth, this.minHeight, @required this.builder
+  WidgetSizeRequirement({Key? key,
+    Widget Function(BuildContext, BoxConstraints)? minBuilder,
+    this.minWidth, this.minHeight, required this.builder
   }) :
     minBuilder = minBuilder ?? ((ctx, cstr)
       => _buildMin(ctx, cstr, minWidth, minHeight)),
@@ -30,7 +30,7 @@ class WidgetSizeRequirement extends StatelessWidget {
   /// The default builder when the size constraints are violated
   static Widget _buildMin(
     BuildContext context, BoxConstraints constraints,
-    double minWidth, double minHeight) {
+    double? minWidth, double? minHeight) {
     var bFont = TextStyle(fontWeight: FontWeight.bold);
     var theme = Theme.of(context);
     return Scaffold(
@@ -72,8 +72,8 @@ class WidgetSizeRequirement extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) =>
-        (minWidth == null || constraints.maxWidth >= minWidth) &&
-          (minHeight == null || constraints.maxHeight >= minHeight)
+        (minWidth == null || constraints.maxWidth >= (minWidth as double)) &&
+          (minHeight == null || constraints.maxHeight >= (minHeight as double))
           ? builder(context, constraints)
           : minBuilder(context, constraints)
     );

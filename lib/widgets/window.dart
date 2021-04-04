@@ -8,11 +8,11 @@ class WindowWidget extends StatelessWidget {
   final double dragWidth, dragCornerWidth;
   final Color color;
   const WindowWidget(
-      {@required this.data,
+      {required this.data,
       this.dragWidth = 10.0,
       this.dragCornerWidth = 15.0,
       this.color = Colors.transparent,
-      Key key})
+      Key? key})
       : super(key: key);
 
   @override
@@ -33,7 +33,10 @@ class WindowWidget extends StatelessWidget {
               child: Container(),
             ),
         builder: (context, state) {
-          var box = Overlay.of(context).context.findRenderObject() as RenderBox;
+          var renderObject = Overlay.of(context)?.context.findRenderObject();
+          assert(renderObject is RenderBox, 'RenderObject must be of instance RenderBox!');
+            
+          var box = renderObject as RenderBox;
 
           // Applies the scale to the window size
           if (state.scale.width != 0.0)

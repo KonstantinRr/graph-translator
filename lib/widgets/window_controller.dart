@@ -32,17 +32,11 @@ class WindowState {
       this.move = true,
       this.offsetScale = Offset.zero,
       this.scale = Size.zero,
-      this.displayName,
+      this.displayName = 'Window',
       this.constraints = const BoxConstraints(
           minWidth: 100, minHeight: 100, maxWidth: 1000, maxHeight: 1000),
       this.type = WindowType.Minimized,
-      Widget Function(BuildContext) builder})
-      : assert(scale != null, 'Scale must not be null!'),
-        assert(offsetScale != null, 'OffsetScale must not be nulL!'),
-        assert(size != null, 'Size must not be null!'),
-        assert(move != null, 'Move must not be null!'),
-        assert(resizeWidth != null, 'resizeWidth must not be null!'),
-        assert(resizeHeight != null, 'resizeHeight must not be null!'),
+      Widget Function(BuildContext)? builder}) : 
         builder = builder ??
             ((context) => Container(
                   alignment: Alignment.center,
@@ -50,16 +44,16 @@ class WindowState {
                 ));
 
   WindowState copyWith(
-      {Size size,
-      Size scale,
-      Offset offset,
-      Offset offsetScale,
-      BoxConstraints constraints,
-      String displayName,
-      bool resizeWidth,
-      bool resizeHeight,
-      WindowType type,
-      Widget Function(BuildContext) builder}) {
+      {Size? size,
+      Size? scale,
+      Offset? offset,
+      Offset? offsetScale,
+      BoxConstraints? constraints,
+      String? displayName,
+      bool? resizeWidth,
+      bool? resizeHeight,
+      WindowType? type,
+      Widget Function(BuildContext)? builder}) {
     return WindowState(
       size: size ?? this.size,
       offset: offset ?? this.offset,
@@ -105,21 +99,25 @@ class WindowData {
   EventController<WindowState> _eventController;
 
   /// The entry that is used to display this
-  OverlayEntry _entry;
+  OverlayEntry? _entry;
   // public API //
 
   EventController<WindowState> get eventController => _eventController;
 
-  WindowData({WindowState initial})
+  WindowData({WindowState? initial})
       : _eventController =
             EventController<WindowState>(initial ?? WindowState()) {
     _entry = _createOverlayEntry();
   }
 
-  WindowState get state => eventController.lastEvent;
+  WindowState get state {
+    assert(eventController.lastEvent != null, 'WindowState must contain last element!');
+    return eventController.lastEvent as WindowState;
+  }
 
   void insert(BuildContext context) {
-    Overlay.of(context).insert(_entry);
+    assert(_entry != null, 'Entry must not be null!');
+    Overlay.of(context)?.insert(_entry as OverlayEntry);
   }
 
   void remove() {
@@ -133,14 +131,13 @@ class WindowData {
   void dispose() {
     remove();
     _entry = null;
-    _eventController?.dispose();
-    _eventController = null;
+    _eventController.dispose();
   }
 
   /// Creates a new event and moves the window
   void move(Offset offset) {
-    eventController.addEvent(eventController.lastEvent.copyWithOffset(
-      eventController.lastEvent.offset + offset,
+    eventController.addEvent(state.copyWithOffset(
+      state.offset + offset,
     ));
   }
 
@@ -159,7 +156,8 @@ class WindowData {
   Size sizeFromOffset(Offset offset) => Size(offset.dx, offset.dy);
 
   void expandOrigin(Offset dOffset) {
-    Size newSize = state.constraints.constrain(state.size - dOffset);
+    Size newSize = state.constraints.constrain(
+      Size(state.size.width - dOffset.dx, state.size.height - dOffset.dy));
     Offset oldEnd = state.offset + offsetFromSize(state.size);
     Offset newEnd = state.offset + offsetFromSize(newSize);
 
@@ -185,7 +183,7 @@ class WindowData {
 
   /// Creates a new event and sets the state of the window
   void setState(WindowType type) {
-    eventController.addEvent(eventController.lastEvent.copyWith(
+    eventController.addEvent(state.copyWith(
       type: type,
     ));
   }
@@ -209,10 +207,12 @@ class Window {
 
   Window(this.stateRef, this.title);
 
-  static Window of(BuildContext context, String name, {bool require = true}) {
+  static Window? of(BuildContext context, String name, {bool require = true}) {
     var ctx = context.findAncestorStateOfType<WindowControllerState>();
-    assert(!require || ctx != null, 'WindowController must not be null');
-    if (ctx == null) return null;
+    if (ctx == null) {
+      assert(!require, 'WindowController must not be null');
+      return null;
+    }
     return Window(ctx, name);
   }
 }
@@ -222,7 +222,7 @@ class WindowController extends StatefulWidget {
   final Widget child;
   final Map<String, WindowState> initialStates;
   const WindowController(
-      {@required this.child, this.initialStates = const {}, Key key})
+      {required this.child, this.initialStates = const {}, Key? key})
       : super(key: key);
 
   @override
@@ -232,17 +232,18 @@ class WindowController extends StatefulWidget {
 class WindowControllerState extends State<WindowController> {
   final Map<String, WindowData> state = {};
 
-  WindowData getWindowData(String title, {WindowState initial}) {
+  WindowData getWindowData(String title, {WindowState? initial}) {
     if (state.containsKey(title)) {
-      return state[title];
+      return state[title] as WindowData;
     } else {
       addWindow(title, initial);
-      return state[title];
+      return state[title] as WindowData;
     }
   }
 
-  void addWindow(String title, WindowState initial) {
-    if (state.containsKey(title)) state[title].dispose();
+  void addWindow(String title, WindowState? initial) {
+    if (state.containsKey(title))
+      (state[title] as WindowData).dispose();
     WindowData data = WindowData(initial: initial);
     data.insert(context);
     state[title] = data;
@@ -251,7 +252,7 @@ class WindowControllerState extends State<WindowController> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+    WidgetsBinding.instance?.addPostFrameCallback((timeStamp) {
       for (var entry in widget.initialStates.entries)
         addWindow(entry.key, entry.value);
     });
@@ -266,7 +267,7 @@ class WindowControllerState extends State<WindowController> {
   /// Captures a [WindowControllerState] from a [BuildContext].
   /// Throws an exception if [require] is true and the [WindowControllerState]
   /// is null.
-  static WindowControllerState of(BuildContext context, {bool require = true}) {
+  static WindowControllerState? of(BuildContext context, {bool require = true}) {
     var ctx = context.findAncestorStateOfType<WindowControllerState>();
     assert(!require || ctx != null, 'WindowController must not be null');
     return ctx;

@@ -14,13 +14,13 @@ Iterable<E> mapIndexed<E, T>(
 
 abstract class LastAccessibleStream<T> {
   Stream<T> get stream;
-  T get lastEvent;
+  T? get lastEvent;
 }
 
 class CombinedStream extends LastAccessibleStream<List> {
   final List<EventController> controllers;
   final _outController = StreamController<List>.broadcast();
-  List<StreamSubscription> subscriptions;
+  late final List<StreamSubscription> subscriptions;
 
   CombinedStream(this.controllers) {
     subscriptions = mapIndexed<StreamSubscription, EventController>(
@@ -53,15 +53,12 @@ class EventStreamBuilder<T> extends StatelessWidget {
   final bool useBuilderOnNull;
 
   EventStreamBuilder(
-      {@required this.controller,
-      @required this.builder,
-      Widget Function(BuildContext) builderNoData,
-      Widget Function(BuildContext, dynamic) builderError,
+      {required this.controller,
+      required this.builder,
+      Widget Function(BuildContext)? builderNoData,
+      Widget Function(BuildContext, dynamic)? builderError,
       this.useBuilderOnNull = true})
-      : assert(controller != null, 'Controller must not be null!'),
-        assert(builder != null, 'Builder must not be null'),
-        assert(useBuilderOnNull != null, 'UseBuilderOnNull must not be null!'),
-        builderNoData =
+      : builderNoData =
             builderNoData ?? ((context) => CircularProgressIndicator()),
         builderError = builderError ??
             ((context, err) => Center(
@@ -76,7 +73,7 @@ class EventStreamBuilder<T> extends StatelessWidget {
       builder: (context, snap) {
         if (snap.hasError) return builderError(context, snap.error);
         if (snap.hasData || useBuilderOnNull)
-          return builder(context, snap.data);
+          return builder(context, snap.data as T);
         return builderNoData(context);
       },
     );
@@ -85,13 +82,13 @@ class EventStreamBuilder<T> extends StatelessWidget {
 
 class EventController<T> extends LastAccessibleStream<T> {
   StreamController<T> streamController = StreamController.broadcast();
-  T _lastEvent;
+  T? _lastEvent;
 
   EventController([this._lastEvent]);
 
   Stream<T> get stream => streamController.stream;
 
-  T get lastEvent => _lastEvent;
+  T? get lastEvent => _lastEvent;
 
   void addEvent(T event) {
     streamController.add(event);
