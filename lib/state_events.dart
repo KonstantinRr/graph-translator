@@ -12,9 +12,91 @@ Iterable<E> mapIndexed<E, T>(
   }
 }
 
-abstract class LastAccessibleStream<T> {
+
+class ListenerHandler<T> {
+  dynamic listenerData;
+
+  void notifyListeners(T? event) {
+    if (listenerData is void Function(T))
+      listenerData(event);
+    else if (listenerData is List) {
+      listenerData.forEach((e) => e(event));
+    }
+  }
+
+  void addListener(void Function(T) listener) {
+    if (listenerData is void Function(T)) {
+      listenerData = <void Function(T)>[listenerData, listener];
+    } else if (listenerData is List) {
+      listenerData.add(listener);
+    } else { // null case
+      listenerData = listener;
+    }
+  }
+
+  void removeListener(void Function(T) listener) {
+    if (listener == listenerData) {
+      listenerData = null;
+    } else if (listenerData is List) {
+      var ldata = listenerData as List;
+      ldata.remove(listener);
+      if (ldata.length == 1) {
+        listenerData = ldata.first;
+      }
+    }
+  }
+
+  T? get lastEvent => null;
+}
+
+
+mixin LastAccessibleListenerImplementer<T> on ListenerHandler<T> {
+  T? _lastEvent;
+
+  @override
+  void notifyListeners(T? event) {
+    _lastEvent = event;
+    super.notifyListeners(event);
+  }
+
+  T? get lastEvent => _lastEvent;
+}
+
+
+abstract class LastAccessibleStream<T> extends ListenerHandler<T> {
+  late final StreamSubscription subscription;
+
+  LastAccessibleStream() {
+    subscription = stream.listen((event) {
+      notifyListeners(event);
+    });
+  }
+
+  void dispose() =>
+    subscription.cancel();
+
   Stream<T> get stream;
   T? get lastEvent;
+}
+
+class EventController<T> extends LastAccessibleStream<T> {
+  StreamController<T> streamController = StreamController.broadcast();
+  T? _lastEvent;
+
+  EventController([this._lastEvent]);
+
+  Stream<T> get stream => streamController.stream;
+
+  T? get lastEvent => _lastEvent;
+
+  void addEvent(T event) {
+    streamController.add(event);
+    _lastEvent = event;
+  }
+
+  void dispose() {
+    streamController.close();
+  }
 }
 
 class CombinedStream extends LastAccessibleStream<List> {
@@ -37,13 +119,16 @@ class CombinedStream extends LastAccessibleStream<List> {
 
   List get lastEvent => controllers.map((e) => e.lastEvent).toList();
 
+  @override
   void dispose() {
     subscriptions.forEach((stream) => stream.cancel());
     _outController.close();
+    super.dispose();
   }
 
   Stream<List> get stream => _outController.stream;
 }
+
 
 class EventStreamBuilder<T> extends StatelessWidget {
   final EventController<T> controller;
@@ -77,25 +162,5 @@ class EventStreamBuilder<T> extends StatelessWidget {
         return builderNoData(context);
       },
     );
-  }
-}
-
-class EventController<T> extends LastAccessibleStream<T> {
-  StreamController<T> streamController = StreamController.broadcast();
-  T? _lastEvent;
-
-  EventController([this._lastEvent]);
-
-  Stream<T> get stream => streamController.stream;
-
-  T? get lastEvent => _lastEvent;
-
-  void addEvent(T event) {
-    streamController.add(event);
-    _lastEvent = event;
-  }
-
-  void dispose() {
-    streamController.close();
   }
 }

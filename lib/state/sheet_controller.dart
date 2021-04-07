@@ -1,84 +1,60 @@
 
-
-import 'dart:math' as math;
-import 'dart:typed_data';
-
+import 'package:graph_translator/state/graph_directed.dart';
+import 'package:graph_translator/util.dart';
 import 'package:graph_translator/widgets/widget_graph.dart';
-
-/*
-class UID {
-  final String data;
-
-  factory UID([String? data]) {
-    if (data == null)
-      return UID.gen();
-    return UID.fromString(data);
-  }
-
-  UID.fromString(this.data);
-
-  factory UID.gen([int? seed,
-    int componentLength = 4,
-    int componentCount = 4,
-    String components = 'abcdefghijklmnopqrstuvwxyz0123456789',
-  ]) {
-    var random = math.Random(seed);
-
-    var idx = 0;
-    Uint8List data = Uint8List(componentLength * componentCount + componentCount - 1);
-    for (var count = 0; count < componentCount; count++) {
-      for (var length = 0; length < componentLength; length++)
-        data[idx++] = components[random.nextInt(components.length)].codeUnitAt(0);
-      if (count < componentCount - 1)
-        data[idx++] = 45;
-    }
-    return UID(String.fromCharCodes(data));
-  }
-
-  @override
-  bool operator==(o) {
-    if (o is UID)
-      return o.data == data;
-    if (o is String)
-      return o == data;
-    return false;
-  }
-
-  int get hashCode => data.hashCode;
-  
-  @override
-  String toString() => data.toString();
-
-  dynamic toJson() => data;
-}
 
 class Sheet {
   String name;
   UID uid;
 
   GraphController controller;
+
+  Sheet({required this.name, required this.controller, required this.uid});
+
+
+  @override
+  bool operator==(o) => o is Sheet && o.uid == uid;
+
+  @override
+  int get hashCode => uid.hashCode;
 }
 
 class SheetController {
   List<Sheet> sheets;
+  
+  SheetController({List<Sheet>? sheets}) : sheets = sheets ?? [];
 
-  SheetDescriptor findDescriptorByName(String name) {
-    for (var key in sheets.keys) {
-      if (key.name == name)
-        return key;
+  Sheet? findByName(String name) {
+    for (var sh in sheets) {
+      if (sh.name == name) return sh;
     }
     return null;
   }
 
-  Sheet findByName(String name) => sheets[findDescriptorByName(name)];
-
-  SheetDescriptor findDescriptorByUID
-
-  void addSheet({String name, String uid, GraphController controller}) {
-    uid ??= generateUID();
-    sheets.length 
+  Sheet? findByUID(UID uid) {
+    for (var sh in sheets) {
+      if (sh.uid == uid) return sh;
+    }
+    return null;
   }
 
-  void removeSheet(SheetDescriptor)
+  void addSheet(Sheet sheet) {
+    sheets.add(sheet);
+  }
+
+  void addSheetFromCompoents({String? name, UID? uid, GraphController? controller}) {
+    name ??= 'Sheet ${sheets.length}';
+    uid ??= UID.gen();
+    controller ??= GraphController(graph: DirectedGraph.example());
+
+    addSheet(Sheet(
+      name: name,
+      uid: uid,
+      controller: GraphController(graph: DirectedGraph.example()),
+    ));
+  }
+
+  void removeSheet(Sheet sheet) {
+    sheets.remove(sheet);
+  }
 }
-*/

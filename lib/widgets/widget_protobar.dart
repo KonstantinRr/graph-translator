@@ -1,22 +1,21 @@
+/// This project is build during the Bachelor Project at the
+/// UNIVERSITY OF GRONINGEN.
+/// The project was build by:
+/// Konstantin Rolf (S3750558) - k.rolf@student.rug.nl
+
+
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:graph_translator/state_events.dart';
-import 'package:graph_translator/widgets/widget_time_controller.dart';
+import 'package:graph_translator/util.dart';
 
-class Pair<T1, T2> {
-  final T1 t1;
-  final T2 t2;
+enum _TSRAppBar { Design, Prototype }
 
-  const Pair(this.t1, this.t2);
-}
-
-enum _ProtoBarValue { Design, Prototype }
-
-class _ProtoBarEvent {
-  final _ProtoBarValue value;
-  const _ProtoBarEvent(this.value);
+class _TSRAppBarEvent {
+  final _TSRAppBar value;
+  const _TSRAppBarEvent(this.value);
 }
 
 enum _ProtoBarState { Open, Close }
@@ -32,11 +31,11 @@ class _ProtoBarManager extends StatefulWidget {
 
 class _ProtoBarManagerState extends State<_ProtoBarManager> {
   final event =
-      EventController<_ProtoBarEvent>(_ProtoBarEvent(_ProtoBarValue.Design));
+      EventController<_TSRAppBarEvent>(_TSRAppBarEvent(_TSRAppBar.Design));
   final offsetMap =
-      EventController<Map<_ProtoBarValue, Pair<Offset, Size>>>(const {
-    _ProtoBarValue.Design: Pair(Offset.zero, Size.zero),
-    _ProtoBarValue.Prototype: Pair(Offset.zero, Size.zero),
+      EventController<Map<_TSRAppBar, Pair<Offset, Size>>>(const {
+    _TSRAppBar.Design: Pair(Offset.zero, Size.zero),
+    _TSRAppBar.Prototype: Pair(Offset.zero, Size.zero),
   });
   final state = EventController<_ProtoBarState>(_ProtoBarState.Open);
 
@@ -54,16 +53,16 @@ class _ProtoBarManagerState extends State<_ProtoBarManager> {
     return ctx;
   }
 
-  void animateTo(_ProtoBarValue key) {
-    event.addEvent(_ProtoBarEvent(key));
+  void animateTo(_TSRAppBar key) {
+    event.addEvent(_TSRAppBarEvent(key));
   }
 
   void setBarState(_ProtoBarState newState) {
     state.addEvent(newState);
   }
 
-  void regiserOffset(_ProtoBarValue key, Pair<Offset, Size> value) {
-    var newMap = (offsetMap.lastEvent as Map<_ProtoBarValue, Pair<Offset, Size>>)
+  void regiserOffset(_TSRAppBar key, Pair<Offset, Size> value) {
+    var newMap = (offsetMap.lastEvent as Map<_TSRAppBar, Pair<Offset, Size>>)
       .map((key, value) => MapEntry(key, value));
     newMap[key] = value;
     offsetMap.addEvent(newMap);
@@ -145,8 +144,8 @@ class _SelectionAnimatorState extends State<_SelectionAnimator>
   Pair<Offset, Size> getFromList(List? event) {
     assert(event != null, 'Event must not be null');
 
-    var key = ((event as List)[1] as _ProtoBarEvent).value;
-    return (event[0] as Map<_ProtoBarValue, Pair<Offset, Size>>)[key] as Pair<Offset, Size>;
+    var key = ((event as List)[1] as _TSRAppBarEvent).value;
+    return (event[0] as Map<_TSRAppBar, Pair<Offset, Size>>)[key] as Pair<Offset, Size>;
   }
 
   void setStopped(Pair<Offset, Size> value) {
@@ -189,7 +188,7 @@ class _SelectionAnimatorState extends State<_SelectionAnimator>
 }
 
 class RegisterSizeWidget extends StatelessWidget {
-  final _ProtoBarValue registerKey;
+  final _TSRAppBar registerKey;
   final Widget child;
   final GlobalKey parent;
   const RegisterSizeWidget(
@@ -357,25 +356,25 @@ class _ProtoBarHeader extends StatelessWidget implements PreferredSizeWidget {
               onPressed: () {},
             ),
             RegisterSizeWidget(
-              registerKey: _ProtoBarValue.Design,
+              registerKey: _TSRAppBar.Design,
               parent: parentKey,
               child: TextButton(
                 onPressed: () {
                   var state = _ProtoBarManagerState.of(context)
                     as _ProtoBarManagerState;
-                  state.animateTo(_ProtoBarValue.Design);
+                  state.animateTo(_TSRAppBar.Design);
                 },
                 child: Text('Design', style: style,),
               ),
             ),
             RegisterSizeWidget(
-              registerKey: _ProtoBarValue.Prototype,
+              registerKey: _TSRAppBar.Prototype,
               parent: parentKey,
               child: TextButton(
                 onPressed: () {
                   var state = _ProtoBarManagerState.of(context)
                     as _ProtoBarManagerState;
-                  state.animateTo(_ProtoBarValue.Prototype);
+                  state.animateTo(_TSRAppBar.Prototype);
                 },
                 child: Text('Prototype', style: style,),
               ),

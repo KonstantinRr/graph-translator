@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:graph_translator/state_events.dart';
 import 'package:quiver/core.dart';
 import 'dart:math' as math;
 
@@ -8,38 +9,8 @@ String typeToString<T>() => T.toString();
 
 abstract class SuperComponent extends Component {}
 
-class ListenerHandler {
-  dynamic listenerData;
 
-  void notifyListeners(Component? component) {
-    if (listenerData is void Function(Component))
-      listenerData(component);
-    else if (listenerData is List) listenerData.forEach((e) => e(component));
-  }
-
-  void addListener(void Function(Component) listener) {
-    if (listenerData is void Function(Component)) {
-      listenerData = <void Function(Component)>[listenerData, listener];
-    } else if (listenerData is List) {
-      listenerData.add(listener);
-    } else // null case
-      listenerData = listener;
-  }
-
-  void removeListener(void Function(Component) listener) {
-    if (listener == listenerData)
-      listenerData = null;
-    else if (listenerData is List) {
-      var ldata = listenerData as List;
-      ldata.remove(listener);
-      if (ldata.length == 1) {
-        listenerData = ldata.first;
-      }
-    }
-  }
-}
-
-abstract class Component extends ListenerHandler {
+abstract class Component extends ListenerHandler<Component> {
   final UniqueKey key = UniqueKey();
   Component? parent;
 
