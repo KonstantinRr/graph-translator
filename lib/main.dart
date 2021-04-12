@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:graph_translator/rotues/rotue_splash.dart';
+import 'package:graph_translator/rotues/route_editor.dart';
 import 'package:graph_translator/rotues/route_home.dart';
 import 'package:graph_translator/rotues/route_unknown.dart';
 import 'package:graph_translator/state/graph.dart';
@@ -33,6 +34,8 @@ class GraphTranslator extends StatelessWidget {
     switch (settings.name) {
       case 'splash':
         return MaterialPageRoute(builder: (context) => const RouteSplash());
+      case 'editor':
+        return MaterialPageRoute(builder: (context) => const RouteEditor());
       case '/':
       default:
         return MaterialPageRoute(builder: (context) => const RouteHome());
@@ -50,7 +53,7 @@ class GraphTranslator extends StatelessWidget {
       onGenerateRoute: onGenerateRotue,
       debugShowCheckedModeBanner: false,
       debugShowMaterialGrid: false,
-      initialRoute: '/',
+      initialRoute: 'editor',
       builder: (context, child) => StateManagerWidget(child: child as Widget),
       theme: ThemeData(
         primaryColor: Colors.orange,
