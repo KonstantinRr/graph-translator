@@ -53,7 +53,7 @@ class GraphTranslator extends StatelessWidget {
       onGenerateRoute: onGenerateRotue,
       debugShowCheckedModeBanner: false,
       debugShowMaterialGrid: false,
-      initialRoute: 'editor',
+      initialRoute: '/',
       builder: (context, child) => StateManagerWidget(child: child as Widget),
       theme: ThemeData(
         primaryColor: Colors.orange,

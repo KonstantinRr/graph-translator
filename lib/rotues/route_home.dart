@@ -61,7 +61,7 @@ class RouteHomeState extends State<RouteHome> {
   void initState() {
     super.initState();
     controller = GraphController(
-        graph: DirectedGraph<DirectedNode, DirectedUnweightedEdge>.example());
+        graph: DirectedGraph.example());
   }
 
   @override

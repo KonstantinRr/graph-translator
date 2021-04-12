@@ -7,6 +7,7 @@ import 'package:fraction/fraction.dart';
 import 'dart:math' as math;
 
 import 'package:graph_translator/state/graph.dart';
+import 'package:flutter/material.dart';
 
 class DirectedNode extends Component with ComponentObject {
   /// Stores the incoming and outgoing edges
@@ -15,8 +16,8 @@ class DirectedNode extends Component with ComponentObject {
   DirectedNode(
       {List<DirectedEdge>? outEdges,
       List<DirectedEdge>? inEdges,
-      required double x,
-      required double y})
+      double? x,
+      double? y})
       : outEdges = outEdges ?? [],
         inEdges = inEdges ?? [] {
     setCoords(x, y);
@@ -92,59 +93,46 @@ class DirectedUnweightedEdge extends DirectedEdge {
   Map<String, dynamic> toJson() => {};
 }
 
-class DirectedGraph<NodeType extends DirectedNode,
-    EdgeType extends DirectedEdge> extends SuperComponent {
-  late List<NodeType> nodes;
+abstract class NodeList<T> {
+  List<T> get nodes;
+}
 
-  DirectedGraph([List<NodeType>? nodes]) : nodes = nodes ?? [];
+class DirectedGraph extends SuperComponent implements Paintable {
+  late List<DirectedNode> nodes;
+
+  DirectedGraph([List<DirectedNode>? nodes]) : nodes = nodes ?? [];
   DirectedGraph.example({int? nodeCount, int? connectionCount}) {
     random(nodeCount: nodeCount, connectionCount: connectionCount);
   }
+
+  DirectedNode createNode() => DirectedNode();
+  DirectedEdge createdEdge(DirectedNode n1, DirectedNode n2) => DirectedUnweightedEdge(n1, n2);
 
   /// Creates a randomized graph with the given node and connection count.
   /// The default [nodeCount] is 10, the default [connectionCount] is 20
   void random(
       {int? nodeCount,
-      int? connectionCount,
-      NodeType Function()? nodeCreator,
-      EdgeType Function(NodeType, NodeType)? edgeCreator}) {
+      int? connectionCount}) {
     // The random object that is used in this function
     final rand = math.Random();
     // sets the default nodeCount and connectionCount
     nodeCount ??= 10;
     connectionCount ??= 20;
 
-    if (nodeCreator == null) {
-      if (NodeType == DirectedNode)
-        nodeCreator = (() => DirectedNode.random() as NodeType);
-      else
-        throw Exception(
-            'Cannot identify default creator for generic node type');
-    }
-
-    if (edgeCreator == null) {
-      if (EdgeType == DirectedUnweightedEdge)
-        edgeCreator = ((v1, v2) => DirectedUnweightedEdge(v1, v2) as EdgeType);
-      else if (EdgeType == DirectedWeightedEdge)
-        edgeCreator = ((v1, v2) => DirectedWeightedEdge(v1, v2) as EdgeType);
-      else
-        throw Exception('Cannot identify default function for generic type');
-    }
-
     nodes = [];
-    for (var i = 0; i < nodeCount; i++) nodes.add(nodeCreator());
+    for (var i = 0; i < nodeCount; i++) {
+      nodes.add(createNode()..randPosition());
+    }
 
     for (var i = 0; i < connectionCount; i++) {
-      NodeType start = nodes[rand.nextInt(nodes.length)];
-      NodeType end = nodes[rand.nextInt(nodes.length)];
-      var edge = edgeCreator(start, end);
+      var start = nodes[rand.nextInt(nodes.length)];
+      var end = nodes[rand.nextInt(nodes.length)];
+      var edge = createdEdge(start, end);
       addEdge(edge);
     }
   }
 
-  bool addEdge(EdgeType edge, {bool replace = true}) {
-    if (!(edge is DirectedEdge))
-      throw FormatException('Edge must be instance of DirectedEdge');
+  bool addEdge(DirectedEdge edge, {bool replace = true}) {
     DirectedNode source = edge.source as DirectedNode,
       destination = edge.destination as DirectedNode;
 
@@ -178,4 +166,56 @@ class DirectedGraph<NodeType extends DirectedNode,
 
   @override
   Map<String, dynamic> toJson() => {};
+
+  @override
+  DirectedGraphPainter painter() => DirectedGraphPainter(this);
+}
+
+
+class DirectedGraphPainter extends ComponentPainter {
+  final DirectedGraph graph;
+  final bool skipInvisible;
+  DirectedGraphPainter(this.graph, {this.skipInvisible = false});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    var radius = 5.0;
+
+    var nodePaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = Colors.black;
+
+    var edgePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..color = Colors.black;
+
+    // perform rendering
+    //int count = 0;
+    for (var node in graph.nodes) {
+      if (skipInvisible) {
+        //Rect renderRect = Rect.fromPoints(
+        //  pointScale(Offset.zero), pointScale(Offset(size.width, size.height)));
+        //var rect = Rect.fromCircle(center: node.offset, radius: radius);
+        //if (rect.overlaps(renderRect)) {
+        //  canvas.drawCircle(node.offset, radius, nodePaint);
+        //  //count++;
+        //}
+        canvas.drawCircle(node.offset, radius, nodePaint);
+      } else {
+        canvas.drawCircle(node.offset, radius, nodePaint);
+      }
+      // render all edges to other nodes
+      for (var edge in node.outEdges) {
+        if (edge.source != null && edge.destination != null)
+          canvas.drawLine(
+            (edge.source as ComponentObject).offset,
+            (edge.destination as ComponentObject).offset,
+            edgePaint,
+          );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

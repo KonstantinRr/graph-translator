@@ -4,7 +4,7 @@ import 'package:graph_translator/state/graph.dart';
 class UndirectedNode extends Component with ComponentObject {
   List<UndirectedEdge> edges;
 
-  UndirectedNode({required double x, required double y, List<UndirectedEdge>? edges})
+  UndirectedNode({double ?x, double ?y, List<UndirectedEdge>? edges,})
       : edges = edges ?? [] {
     setCoords(x, y);
   }
@@ -71,7 +71,7 @@ class UndirectedWeightedEdge extends UndirectedEdge {
       };
 }
 
-class GraphUndirected extends SuperComponent {
+abstract class GraphUndirected extends SuperComponent {
   List<UndirectedNode> nodes = [];
 
   bool addEdge(UndirectedEdge edge, {bool replace = true}) {
@@ -93,6 +93,9 @@ class GraphUndirected extends SuperComponent {
       p2.edges.add(edge);
     return true;
   }
+
+  UndirectedNode createNode() => UndirectedNode();
+  UndirectedEdge createEdge(UndirectedNode n1, UndirectedNode n2) => UndirectedUnweightedEdge(n1, n2);
 
   @override
   Iterable<Component> get children => nodes;

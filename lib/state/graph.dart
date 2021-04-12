@@ -75,13 +75,20 @@ mixin DirectedComponentConnector on ComponentConnector {
       hash2(p1.hashCode, p2.hashCode) ^ hash2(p2.hashCode, p1.hashCode);
 }
 
+abstract class ComponentPainter extends CustomPainter {
+}
+
+abstract class Paintable {
+  ComponentPainter painter();
+}
+
 mixin ComponentObject {
   /// Stores the coordinates
   double x = 0.0, y = 0.0;
 
-  void setCoords(double x, double y) {
-    this.x = x;
-    this.y = y;
+  void setCoords(double? x, double? y) {
+    if (x != null) this.x = x;
+    if (y != null) this.y = y;
   }
 
   void randPosition([Rect? region, math.Random? rand]) {

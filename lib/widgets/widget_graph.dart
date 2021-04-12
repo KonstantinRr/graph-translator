@@ -54,43 +54,6 @@ class GraphPainter extends CustomPainter {
         (offset.dy + translator.dy) * translator.zoom);
   }
 
-  void paintDirected(DirectedGraph graph, Canvas canvas, Size size) {
-    Rect renderRect = Rect.fromPoints(
-        pointScale(Offset.zero), pointScale(Offset(size.width, size.height)));
-    var radius = 5.0 / translator.zoom;
-
-    var nodePaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = Colors.black;
-
-    var edgePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..color = Colors.black;
-
-    // perform rendering
-    //int count = 0;
-    for (var node in graph.nodes) {
-      if (skipInvisible) {
-        var rect = Rect.fromCircle(center: node.offset, radius: radius);
-        if (rect.overlaps(renderRect)) {
-          canvas.drawCircle(node.offset, radius, nodePaint);
-          //count++;
-        }
-      } else {
-        canvas.drawCircle(node.offset, radius, nodePaint);
-      }
-      // render all edges to other nodes
-      for (var edge in node.outEdges) {
-        if (edge.source != null && edge.destination != null)
-          canvas.drawLine(
-            (edge.source as ComponentObject).offset,
-            (edge.destination as ComponentObject).offset,
-            edgePaint,
-          );
-      }
-    }
-  }
-
   @override
   void paint(Canvas canvas, Size size) {
     canvas.save();
@@ -99,8 +62,9 @@ class GraphPainter extends CustomPainter {
     canvas.translate(-translator.dx, -translator.dy);
     canvas.scale(translator.zoom);
 
-    if (state.graph is DirectedGraph)
-      paintDirected(state.graph as DirectedGraph, canvas, size);
+    if (state.graph is Paintable)
+      (state.graph as Paintable).painter().paint(canvas, size);
+      //paintDirected(state.graph as DirectedGraph, canvas, size);
 
     if (state.source != null && state.destination != null) {
       var paint = Paint()
