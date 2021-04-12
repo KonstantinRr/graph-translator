@@ -1,9 +1,9 @@
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:graph_translator/state_events.dart';
 import 'package:quiver/core.dart';
 import 'dart:math' as math;
 
-import 'package:vector_math/vector_math.dart';
+import 'package:vector_math/vector_math.dart' as vec;
 
 String typeToString<T>() => T.toString();
 
@@ -26,27 +26,6 @@ abstract class Component extends ListenerHandler<Component> {
   Map<String, dynamic> toJson() => {'type': 'Component'};
 }
 
-mixin Input {
-  Map<String, InputValue> data = {};
-
-  void addInput(String key, InputValue value) {
-    data[key] = value;
-  }
-}
-
-class InputValue {
-  ComponentConnector? connected;
-}
-
-class NamedInput extends InputValue {}
-
-class AnyInput extends InputValue {
-  List<Input>? inputs;
-
-  void addInput(Input? input) {
-    inputs?.add(input as Input);
-  }
-}
 
 class ComponentConnector {
   ComponentObject? p1, p2;
@@ -76,9 +55,11 @@ mixin DirectedComponentConnector on ComponentConnector {
 }
 
 abstract class ComponentPainter extends CustomPainter {
+  const ComponentPainter();
 }
 
 abstract class Paintable {
+  const Paintable();
   ComponentPainter painter();
 }
 
@@ -98,7 +79,37 @@ mixin ComponentObject {
     y = rand.nextDouble() * region.height + region.top;
   }
 
+  void applyTranslation(Canvas canvas) {
+    canvas.translate(x, y);
+  }
+
   Offset get offset => Offset(x, y);
   Size get size => Size(x, y);
-  Vector2 get vec => Vector2(x, y);
+  vec.Vector2 get vector => vec.Vector2(x, y);
+}
+
+abstract class Node extends Component with ComponentObject implements Paintable {
+
+  @override
+  NodePainter painter() => NodePainter(this);
+}
+
+class NodePainter extends ComponentPainter {
+  final Node nd;
+
+  const NodePainter(this.nd);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    var radius = 5.0;
+
+    var nodePaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = Colors.black;
+
+    canvas.drawCircle(nd.offset, radius, nodePaint);
+  }
+  
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

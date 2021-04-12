@@ -1,7 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:fraction/fraction.dart';
 import 'package:graph_translator/state/graph.dart';
 
-class UndirectedNode extends Component with ComponentObject {
+class UndirectedNode extends Node {
   List<UndirectedEdge> edges;
 
   UndirectedNode({double ?x, double ?y, List<UndirectedEdge>? edges,})
@@ -34,8 +35,33 @@ class UndirectedNode extends Component with ComponentObject {
       };
 }
 
+class UndirectedEdgePainter extends ComponentPainter {
+  final UndirectedEdge edge;
+  const UndirectedEdgePainter(this.edge);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    var edgePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..color = Colors.black;
+
+    if (edge.p1 != null && edge.p2 != null)
+      canvas.drawLine(
+        edge.p1!.offset,
+        edge.p2!.offset,
+        edgePaint,
+      );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
 abstract class UndirectedEdge extends Component
-    with ComponentConnector, UndirectedComponentConnector {}
+    with ComponentConnector, UndirectedComponentConnector implements Paintable{
+  @override
+  UndirectedEdgePainter painter() => UndirectedEdgePainter(this);
+}
 
 class UndirectedUnweightedEdge extends UndirectedEdge {
   UndirectedUnweightedEdge(UndirectedNode v1, UndirectedNode v2) {

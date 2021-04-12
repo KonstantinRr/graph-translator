@@ -64,7 +64,6 @@ class GraphPainter extends CustomPainter {
 
     if (state.graph is Paintable)
       (state.graph as Paintable).painter().paint(canvas, size);
-      //paintDirected(state.graph as DirectedGraph, canvas, size);
 
     if (state.source != null && state.destination != null) {
       var paint = Paint()

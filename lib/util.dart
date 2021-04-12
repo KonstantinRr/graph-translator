@@ -2,11 +2,27 @@ import 'dart:math' as math;
 
 import 'dart:typed_data';
 
+import 'package:flutter/painting.dart';
+import 'package:vector_math/vector_math.dart' as vec;
+
 class Pair<T1, T2> {
   final T1 t1;
   final T2 t2;
 
   const Pair(this.t1, this.t2);
+}
+
+extension VectorToOffsetSize on vec.Vector2 {
+  Offset toOffset() => Offset(x, y);
+  Size toSize() => Size(x, y);
+}
+
+extension OffsetToVector on Offset {
+  vec.Vector2 toVector() => vec.Vector2(dx, dy);
+}
+
+extension SizeToVector on Size {
+  vec.Vector2 toSize() => vec.Vector2(width, height);
 }
 
 class UID {

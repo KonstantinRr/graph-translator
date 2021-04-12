@@ -8,8 +8,10 @@ import 'dart:math' as math;
 
 import 'package:graph_translator/state/graph.dart';
 import 'package:flutter/material.dart';
+import 'package:graph_translator/util.dart';
+import 'package:vector_math/vector_math.dart' as vec;
 
-class DirectedNode extends Component with ComponentObject {
+class DirectedNode extends Node {
   /// Stores the incoming and outgoing edges
   List<DirectedEdge> outEdges, inEdges;
 
@@ -59,9 +61,61 @@ class DirectedNode extends Component with ComponentObject {
   Map<String, dynamic> toJson() => {'type': typeToString<DirectedNode>()};
 }
 
+class DirectedEdgePainter extends ComponentPainter {
+  final DirectedEdge edge;
+  const DirectedEdgePainter(this.edge);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    var stopDistance = 5.0;
+    var arrowDist = 15.0;
+    var arrowLength = 15.0;
+
+    var edgePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..color = Colors.black;
+
+    var arrowPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = Colors.black;
+
+    if (edge.source != null && edge.destination != null) {
+      
+      var connector = edge.source!.vector - edge.destination!.vector;
+      connector.normalize();
+      
+      var stopVector = connector.scaled(stopDistance);
+
+      var dest = (edge.destination!.vector + stopVector);
+      var src = (edge.source!.vector - stopVector);
+      
+      var cross = vec.Vector2(-arrowDist * connector.y, arrowDist * connector.x);
+      var t2 = (dest + connector.scaled(arrowLength));
+      var q1 = t2 + cross;
+      var q2 = t2 - cross;
+      
+
+      var path = Path();
+      path.moveTo(dest.x, dest.y);
+      path.lineTo(q1.x, q1.y);
+      path.lineTo(q2.x, q2.y);
+      path.close();
+
+      canvas.drawPath(path, arrowPaint);
+      canvas.drawLine(src.toOffset(), dest.toOffset(), edgePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
 /// The general interface of a directed edge
 abstract class DirectedEdge extends Component
-    with ComponentConnector, DirectedComponentConnector {}
+    with ComponentConnector, DirectedComponentConnector implements Paintable {
+  @override
+  DirectedEdgePainter painter() => DirectedEdgePainter(this);
+}
 
 /// A weigthed implementation of [DirectedEdge]
 class DirectedWeightedEdge extends DirectedEdge {
@@ -178,19 +232,8 @@ class DirectedGraphPainter extends ComponentPainter {
   DirectedGraphPainter(this.graph, {this.skipInvisible = false});
 
   @override
-  void paint(Canvas canvas, Size size) {
-    var radius = 5.0;
-
-    var nodePaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = Colors.black;
-
-    var edgePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..color = Colors.black;
-
+  void paint(Canvas canvas, Size size) {;
     // perform rendering
-    //int count = 0;
     for (var node in graph.nodes) {
       if (skipInvisible) {
         //Rect renderRect = Rect.fromPoints(
@@ -200,18 +243,13 @@ class DirectedGraphPainter extends ComponentPainter {
         //  canvas.drawCircle(node.offset, radius, nodePaint);
         //  //count++;
         //}
-        canvas.drawCircle(node.offset, radius, nodePaint);
+        //canvas.drawCircle(node.offset, radius, nodePaint);
       } else {
-        canvas.drawCircle(node.offset, radius, nodePaint);
+        node.painter().paint(canvas, size);
       }
       // render all edges to other nodes
       for (var edge in node.outEdges) {
-        if (edge.source != null && edge.destination != null)
-          canvas.drawLine(
-            (edge.source as ComponentObject).offset,
-            (edge.destination as ComponentObject).offset,
-            edgePaint,
-          );
+        edge.painter().paint(canvas, size);
       }
     }
   }
