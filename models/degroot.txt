@@ -1,0 +1,30 @@
+
+model -> [
+    // list of global variables
+    variables -> [
+
+    ]
+
+    // The list of possible states that a node can have
+    states -> [
+        A = [0, 1]      // A can contain all states in the range 0 to 1
+    ]
+
+    // The list of all nodes in the graph
+    nodes -> [
+        A, B, C, D, E,  // Nodes A to E
+    ]
+
+    // The list of all edges in the graph
+    connections -> [
+        (A, B),         // A connects to B
+        (B, C),
+        (C, A),
+        (D, C),
+        (D, B),
+    ]
+
+    policy -> [
+        A -> A 
+    ]
+]

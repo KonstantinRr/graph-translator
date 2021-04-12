@@ -1,0 +1,32 @@
+
+model -> [
+    // list of global variables
+    variables -> [
+        q = 0.5         // The threshold q
+    ]
+
+    // The list of possible states that a node can have
+    states -> [
+        P,              // The state P
+        NP,             // The state NP
+    ]
+
+    // The list of all nodes in the graph
+    nodes -> [
+        A, B, C, D, E,  // Nodes A to E
+    ]
+
+    // The list of all edges in the graph
+    connections -> [
+        (A, B),         // A connects to B
+        (B, C),
+        (C, A),
+        (D, C),
+        (D, B),
+    ]
+
+    policy -> [
+        NP -> P if count(neighbours(node) with P) / count(neighbours(node) with NP) >= q,
+        P -> NP if count(neighbours(node) with P) / count(neighbours(node) with NP) < q,
+    ]
+]

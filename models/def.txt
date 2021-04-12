@@ -1,0 +1,26 @@
+
+model -> [
+    // The list of possible states
+    states -> [
+        P,              // The state P
+        NP,             // The state NP
+        A=[-1, 1]       // The state A containing values in the range -1 to 1
+    ]
+
+    // The list of all nodes in the graph
+    nodes -> [
+        A, B, C, D, E,  // Nodes A to E
+    ]
+
+    // A list of 
+    connections -> [
+        (A, B),         // A connects to B
+        (B, C, 1)       // B connects to A with weight 1
+    ]
+
+    policy -> [
+        P -> NP if neighbours(node) with P > neighbours(node) with NP,
+        NP -> P if neighbours(node) with P <= neighbours(node) with NP,
+        A -> A 
+    ]
+]
