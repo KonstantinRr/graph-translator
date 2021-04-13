@@ -63,33 +63,37 @@ class DirectedNode extends Node {
 
 class DirectedEdgePainter extends ComponentPainter {
   final DirectedEdge edge;
-  const DirectedEdgePainter(this.edge);
+  final double arrowWidth, arrowLength;
+  const DirectedEdgePainter(this.edge, {this.arrowWidth = 5.0, this.arrowLength = 5.0});
+
+  double getSize() {
+    if (edge.destination is Paintable) {
+      var destPainter = (edge.destination as Paintable).painter();
+      if (destPainter is NodePainter)
+        return destPainter.radius;
+    }
+    return 0.0;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
-    var stopDistance = 5.0;
-    var arrowDist = 15.0;
-    var arrowLength = 15.0;
-
-    var edgePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..color = Colors.black;
-
-    var arrowPaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = Colors.black;
-
     if (edge.source != null && edge.destination != null) {
-      
-      var connector = edge.source!.vector - edge.destination!.vector;
-      connector.normalize();
-      
-      var stopVector = connector.scaled(stopDistance);
+      var stopDistance = getSize();
 
+      var edgePaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..color = Colors.black;
+
+      var arrowPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = Colors.black;
+      
+      var connector = (edge.source!.vector - edge.destination!.vector).normalized();
+      var stopVector = connector.scaled(stopDistance);
       var dest = (edge.destination!.vector + stopVector);
       var src = (edge.source!.vector - stopVector);
       
-      var cross = vec.Vector2(-arrowDist * connector.y, arrowDist * connector.x);
+      var cross = vec.Vector2(-arrowWidth * connector.y, arrowWidth * connector.x);
       var t2 = (dest + connector.scaled(arrowLength));
       var q1 = t2 + cross;
       var q2 = t2 - cross;
@@ -101,8 +105,8 @@ class DirectedEdgePainter extends ComponentPainter {
       path.lineTo(q2.x, q2.y);
       path.close();
 
-      canvas.drawPath(path, arrowPaint);
       canvas.drawLine(src.toOffset(), dest.toOffset(), edgePaint);
+      canvas.drawPath(path, arrowPaint);
     }
   }
 

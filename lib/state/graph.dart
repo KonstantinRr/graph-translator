@@ -96,13 +96,13 @@ abstract class Node extends Component with ComponentObject implements Paintable 
 
 class NodePainter extends ComponentPainter {
   final Node nd;
+  final double _radius;
+  const NodePainter(this.nd, {double radius = 5.0}) : _radius = radius;
 
-  const NodePainter(this.nd);
+  double get radius => _radius;
 
   @override
   void paint(Canvas canvas, Size size) {
-    var radius = 5.0;
-
     var nodePaint = Paint()
       ..style = PaintingStyle.fill
       ..color = Colors.black;
