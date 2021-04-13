@@ -1,5 +1,12 @@
+/// This project is build during the Bachelor Project at the
+/// UNIVERSITY OF GRONINGEN.
+/// The project was build by:
+/// Konstantin Rolf (S3750558) - k.rolf@student.rug.nl
+
 import 'package:flutter/material.dart';
+
 import 'package:fraction/fraction.dart';
+
 import 'package:graph_translator/state/graph.dart';
 
 class UndirectedNode extends Node {
@@ -97,8 +104,12 @@ class UndirectedWeightedEdge extends UndirectedEdge {
       };
 }
 
-abstract class GraphUndirected extends SuperComponent {
+
+abstract class GraphUndirected extends Graph {
   List<UndirectedNode> nodes = [];
+
+  @override
+  List<Node> get listNodes => nodes;
 
   bool addEdge(UndirectedEdge edge, {bool replace = true}) {
     if (!(edge.p1 is UndirectedNode) || !(edge.p2 is UndirectedNode))

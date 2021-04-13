@@ -155,8 +155,10 @@ abstract class NodeList<T> {
   List<T> get nodes;
 }
 
-class DirectedGraph extends SuperComponent implements Paintable {
+class DirectedGraph extends Graph implements Paintable {
   late List<DirectedNode> nodes;
+
+  List<Node> get listNodes => nodes;
 
   DirectedGraph([List<DirectedNode>? nodes]) : nodes = nodes ?? [];
   DirectedGraph.example({int? nodeCount, int? connectionCount}) {

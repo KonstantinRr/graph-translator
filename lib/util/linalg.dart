@@ -1,6 +1,11 @@
+/// This project is build during the Bachelor Project at the
+/// UNIVERSITY OF GRONINGEN.
+/// The project was build by:
+/// Konstantin Rolf (S3750558) - k.rolf@student.rug.nl
+
+import 'dart:math' as math;
 import 'dart:collection';
 import 'dart:typed_data';
-import 'dart:math' as math;
 
 abstract class SizeObject with IterableMixin<double>{
   Float32List _data;

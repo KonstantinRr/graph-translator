@@ -1,9 +1,17 @@
-import 'package:flutter/material.dart';
-import 'package:graph_translator/state_events.dart';
-import 'package:quiver/core.dart';
+/// This project is build during the Bachelor Project at the
+/// UNIVERSITY OF GRONINGEN.
+/// The project was build by:
+/// Konstantin Rolf (S3750558) - k.rolf@student.rug.nl
+
 import 'dart:math' as math;
 
+import 'package:flutter/material.dart';
+
+import 'package:quiver/core.dart';
 import 'package:vector_math/vector_math.dart' as vec;
+
+import 'package:graph_translator/state_events.dart';
+
 
 String typeToString<T>() => T.toString();
 
@@ -112,4 +120,38 @@ class NodePainter extends ComponentPainter {
   
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+abstract class Graph extends SuperComponent {
+  List<Node> get listNodes;
+  
+  static final double Function(Node)
+    compMaxX = (nd) => nd.x,
+    compMinX = (nd) => -nd.x,
+    compMaxY = (nd) => nd.y,
+    compMinY = (nd) => -nd.y,
+    compMaxAbsX = (nd) => nd.x.abs(),
+    compMinAbsX = (nd) => -nd.x.abs(),
+    compMaxAbsY = (nd) => nd.y.abs(),
+    compMinAbsY = (nd) => -nd.y.abs();
+
+  int argMax<T extends Comparable<T>>(T Function(Node) functor) {
+    List<Node> ref = listNodes;
+    if (ref.isEmpty) return -1;
+    
+    var value = functor(ref[0]);
+    int idx = 0;
+    for (var i = 1; i < listNodes.length; i++) {
+      if (functor(ref[i]).compareTo(value) == 1)
+        idx = i;
+    }
+    return idx;
+  }
+
+  Node? nodeMax<T extends Comparable<T>>(T Function(Node) functor) {
+    var idx = argMax<T>(functor);
+    if (idx == -1) return null;
+    return listNodes[idx];
+  }
+
 }

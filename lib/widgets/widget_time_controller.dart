@@ -1,9 +1,9 @@
-import 'dart:async';
-
 /// This project is build during the Bachelor Project at the
 /// UNIVERSITY OF GRONINGEN.
 /// The project was build by:
 /// Konstantin Rolf (S3750558) - k.rolf@student.rug.nl
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:graph_translator/widgets/widget_graph.dart';
