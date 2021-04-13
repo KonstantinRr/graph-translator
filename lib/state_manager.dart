@@ -7,6 +7,11 @@ import 'package:flutter/material.dart';
 import 'package:graph_translator/state/graph.dart';
 import 'package:graph_translator/state_events.dart';
 
+abstract class ReversibleEvent {
+  void forward();
+  void reverse();
+}
+
 class EventParent {
   DateTime time;
 

@@ -12,6 +12,7 @@ import 'package:graph_translator/main.dart';
 import 'package:graph_translator/state/graph.dart';
 import 'package:graph_translator/state/graph_directed.dart';
 import 'package:graph_translator/state_events.dart';
+import 'package:graph_translator/state_manager.dart';
 
 class GraphTranslator {
   double zoom;
@@ -102,6 +103,66 @@ class GraphControllerState {
 
   @override
   String toString() => 'source: $source dest: $destination';
+}
+
+class ActionController extends ChangeNotifier {
+  final List<ReversibleEvent> undoStack = [], redoStack = [];
+
+  void executeEvent(ReversibleEvent event) {
+    event.forward();
+    undoStack.add(event);
+    // clears the redo stack
+    if (redoStack.isNotEmpty) {
+      if (event == redoStack.last) {
+        redoStack.removeLast();
+      } else {
+        redoStack.clear();
+      }
+    }
+    notifyListeners();
+  }
+
+  bool get canUndo => undoStack.isNotEmpty;
+  bool get canRedo => redoStack.isNotEmpty;
+
+  void clear() {
+    undoStack.clear();
+    redoStack.clear();
+  }
+
+  void undoAll() {
+    if (undoStack.isNotEmpty) {
+      undoStack.forEach((e) => e.reverse());
+      redoStack.addAll(undoStack);
+      undoStack.clear();
+      notifyListeners();
+    }
+  }
+
+  void redoAll() {
+    if (redoStack.isNotEmpty) {
+      redoStack.forEach((e) => e.forward());
+      undoStack.addAll(redoStack);
+      redoStack.clear();
+      notifyListeners();
+    }
+  }
+
+  void undo() {
+    assert(canUndo);
+    var value = undoStack.removeLast();
+    value.reverse();
+    redoStack.add(value);
+    notifyListeners();
+  }
+
+  void redo() {
+    assert(canRedo);
+    var value = redoStack.removeLast();
+    value.forward();
+    undoStack.add(value);
+    notifyListeners();
+  }
 }
 
 class GraphController {

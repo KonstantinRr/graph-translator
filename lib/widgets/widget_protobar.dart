@@ -10,6 +10,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:graph_translator/state_events.dart';
 import 'package:graph_translator/util.dart';
+import 'package:graph_translator/widgets/widget_graph.dart';
 
 enum _TSRAppBar { Design, Prototype }
 
@@ -217,6 +218,9 @@ class RegisterSizeWidget extends StatelessWidget {
 }
 
 class ProtoBar extends StatelessWidget {
+  final GraphController controller;
+  const ProtoBar({required this.controller, Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return _ProtoBarManager(
@@ -229,7 +233,7 @@ class ProtoBar extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Expanded(child: _ProtoBarHeader(),),
+                  Expanded(child: _ProtoBarHeader(controller: controller,),),
                   _ProtoBarContentHeader(),
                   _ProtoBarStateButton(),
                 ],
@@ -330,9 +334,11 @@ class _ProtoBarContentState extends State<_ProtoBarContent>
 
 class _ProtoBarHeader extends StatelessWidget implements PreferredSizeWidget {
   final GlobalKey parentKey = GlobalKey();
+  final GraphController controller;
   final double height;
 
-  _ProtoBarHeader({this.height = kToolbarHeight, Key? key}) : super(key: key);
+  _ProtoBarHeader({required this.controller,
+    this.height = kToolbarHeight, Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -354,6 +360,15 @@ class _ProtoBarHeader extends StatelessWidget implements PreferredSizeWidget {
               icon: Icon(Icons.home),
               color: Colors.grey,
               onPressed: () {},
+            ),
+            IconButton(
+              icon: Icon(Icons.arrow_back),
+              color: Colors.grey,
+              onPressed: () { },
+            ),
+            IconButton(
+              icon: Icon(Icons.arrow_forward),
+              onPressed: () { },
             ),
             RegisterSizeWidget(
               registerKey: _TSRAppBar.Design,
