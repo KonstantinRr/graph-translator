@@ -4,6 +4,7 @@
 /// Konstantin Rolf (S3750558) - k.rolf@student.rug.nl
 
 import 'package:flutter/material.dart';
+import 'package:graph_translator/state/graph_directed.dart';
 import 'package:graph_translator/widgets/widget_graph.dart';
 
 class WidgetGenerator extends StatefulWidget {
@@ -25,9 +26,11 @@ class WidgetGeneratorState extends State<WidgetGenerator> {
     return ElevatedButton(
       onPressed: () {
         widget.controller.updateGraphState((g) {
-          return g..random(
-              nodeCount: sliderNodes.round(),
-              connectionCount: sliderEdges.round());
+          // TODO fix
+          return (g as DirectedGraph)
+            ..random(
+                nodeCount: sliderNodes.round(),
+                connectionCount: sliderEdges.round());
         });
       },
       style: ElevatedButton.styleFrom(

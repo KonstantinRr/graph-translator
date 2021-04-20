@@ -5,6 +5,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -14,31 +15,56 @@ import 'package:graph_translator/state/graph_directed.dart';
 import 'package:graph_translator/state_events.dart';
 import 'package:graph_translator/state_manager.dart';
 
-class GraphTranslator {
-  double zoom;
-  double dx, dy;
+class GraphTranslator extends ChangeNotifier {
+  double _zoom;
+  double _dx, _dy;
 
-  GraphTranslator({this.zoom = 1.0, this.dx = 0.0, this.dy = 0.0});
+  GraphTranslator({double zoom = 1.0, double dx = 0.0, double dy = 0.0}) :
+    _zoom = zoom, _dx = dx, _dy = dy;
+
+  double get zoom => _zoom;
+  double get dx => _dx;
+  double get dy => _dy;
+
+  set zoom(double zoom) {
+    _zoom = zoom;
+    notifyListeners();
+  }
+
+  set dx(double dx) {
+    _dx = dx;
+    notifyListeners();
+  }
+  
+  set dy(double dy) {
+    _dy = dy;
+    notifyListeners();
+  }
 
   void applyZoom(double azoom) {
-    zoom *= azoom;
+    _zoom *= azoom;
+    notifyListeners();
   }
 
   void applyTranslation(Offset offset) {
-    dx += offset.dx / zoom;
-    dy += offset.dy / zoom;
+    _dx += offset.dx / _zoom;
+    _dy += offset.dy / _zoom;
+    notifyListeners();
   }
 
-  Offset forward(Offset tx) => tx.translate(dx, dy).scale(zoom, zoom);
-  Offset reverse(Offset tx) => tx.scale(1 / zoom, 1 / zoom).translate(-dx, -dy);
 
-  Offset get offset => Offset(dx, dy);
+
+  Offset forward(Offset tx) => tx.translate(_dx, _dy).scale(_zoom, _zoom);
+  Offset reverse(Offset tx) => tx.scale(1 / _zoom, 1 / _zoom).translate(-_dx, -_dy);
+
+  Offset get offset => Offset(_dx, _dy);
+  Size get size => Size(_dx, _dy);
 
   bool operator ==(o) =>
-      o is GraphTranslator && o.zoom == zoom && o.dx == dx && o.dy == dy;
+      o is GraphTranslator && o._zoom == _zoom && o._dx == _dx && o._dy == _dy;
 
   @override
-  int get hashCode => hashValues(zoom, dx, dy);
+  int get hashCode => hashValues(_zoom, _dx, _dy);
 }
 
 class GraphPainter extends CustomPainter {
@@ -62,17 +88,15 @@ class GraphPainter extends CustomPainter {
     canvas.translate(-translator.dx, -translator.dy);
     canvas.scale(translator.zoom);
 
-    if (state.graph is Paintable)
-      (state.graph as Paintable).painter().paint(canvas, size);
+    if (state.graph is Paintable) state.graph.painter().paint(canvas, size);
 
     if (state.source != null && state.destination != null) {
       var paint = Paint()
         ..color = Colors.blue.withOpacity(0.3)
         ..style = PaintingStyle.fill;
-      canvas.drawRect(Rect.fromPoints(
-        state.source as Offset,
-        state.destination as Offset
-      ), paint);
+      canvas.drawRect(
+          Rect.fromPoints(state.source as Offset, state.destination as Offset),
+          paint);
     }
 
     canvas.restore();
@@ -82,27 +106,17 @@ class GraphPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
-class GraphControllerState {
-  final SuperComponent graph;
-  final GraphTranslator translator;
-  final Offset? source, destination;
-  const GraphControllerState(
-      this.graph, this.translator, this.source, this.destination);
+class SelectionAreaNotifier extends ChangeNotifier {
 
-  GraphControllerState copyWith(
-      {SuperComponent? graph,
-      GraphTranslator? translator,
-      Nullable<Offset>? source,
-      Nullable<Offset>? destination}) {
-    return GraphControllerState(
-        graph ?? this.graph,
-        translator ?? this.translator,
-        source == null ? this.source : source.value,
-        destination == null ? this.destination : destination.value);
-  }
+  final Offset? _source, _destination;
+  SelectionAreaNotifier({Offset? source, Offset? destination}) : _source = source, _destination = destination;
+
+  Rect? get rect => _source != null && _destination != null ? Rect.fromPoints(_source!, _destination!) : null;
+  Offset? get source => _source;
+  Offset? get destination => _destination;
 
   @override
-  String toString() => 'source: $source dest: $destination';
+  String toString() => 'source: $_source dest: $_destination';
 }
 
 class ActionController extends ChangeNotifier {
@@ -165,8 +179,34 @@ class ActionController extends ChangeNotifier {
   }
 }
 
+class SelectionNotifier extends ChangeNotifier {
+  List<Component> _selected;
+
+  SelectionNotifier({List<Component>? selected}) : _selected = selected ?? [];
+
+  List<Component> get selected => _selected;
+  set selected(List<Component> selected) {
+    _selected = selected;
+    notifyListeners();
+  }
+
+  void updateWith(dynamic Function(List<Component>) functor) {
+    var val = functor(_selected);
+    notifyListeners();
+  }
+}
+
+class GraphState extends ChangeNotifier {
+  SuperComponent _component;
+}
+
 class GraphController {
   EventController<GraphControllerState> _controller;
+  ActionController _action = ActionController();
+  SelectionNotifier selection = SelectionNotifier();
+  SelectionAreaNotifier area = SelectionAreaNotifier();
+  GraphTranslator translator = GraphTranslator();
+  ValueListenable<SuperComponent> _component = ValueListenable();
 
   GraphController({SuperComponent? graph, GraphTranslator? translator})
       : _controller = EventController(GraphControllerState(
@@ -175,28 +215,6 @@ class GraphController {
           null,
           null,
         ));
-
-  Stream<GraphControllerState> get events => _controller.stream;
-  GraphControllerState get state => _controller.lastEvent as GraphControllerState;
-
-  GraphTranslator get translator => _controller.lastEvent?.translator as GraphTranslator;
-  DirectedGraph get graph => _controller.lastEvent?.graph as DirectedGraph;
-  Offset? get selectionSource => _controller.lastEvent?.source;
-  Offset? get selectionDestination => _controller.lastEvent?.destination;
-
-  set graph(DirectedGraph graph) =>
-      _controller.addEvent(state.copyWith(graph: graph));
-  set translator(GraphTranslator translator) =>
-      _controller.addEvent(state.copyWith(translator: translator));
-  set selectionSource(Offset? source) =>
-      _controller.addEvent(state.copyWith(source: Nullable(source)));
-  set selectionDestination(Offset? destination) =>
-      _controller.addEvent(state.copyWith(destination: Nullable(destination)));
-
-  void updateGraphState(DirectedGraph Function(DirectedGraph) func) =>
-      graph = func(graph);
-  void updateViewState(GraphTranslator Function(GraphTranslator) func) =>
-      translator = func(translator);
 
   void dispose() {
     _controller.dispose();
@@ -216,6 +234,13 @@ class GraphWidget extends StatelessWidget {
         //onPointerDown: (event) { print('Down'); },
         //onPointerHover: (event) { print('Hover'); },
         onPointerUp: (upEvent) {
+          if (controller.selectionSource != null &&
+              controller.selectionDestination != null) {
+            var rect = Rect.fromPoints(
+                controller.selectionSource!, controller.selectionDestination!);
+            controller.g
+            //controller.
+          }
           controller.selectionSource = null;
           controller.selectionDestination = null;
         },

@@ -12,11 +12,50 @@ import 'package:vector_math/vector_math.dart' as vec;
 
 import 'package:graph_translator/state_events.dart';
 
-
 String typeToString<T>() => T.toString();
 
-abstract class SuperComponent extends Component {}
+abstract class SuperComponent extends Component implements Paintable {
+  List<Component> findSelectedComponents(Rect r) {
+    return children
+        .where((i) =>
+            i is ComponentObject && r.contains((i as ComponentObject).offset))
+        .toList();
+  }
 
+  @override
+  ComponentPainter painter() => SuperComponentPainter(this);
+
+  int get length => children.length;
+  Iterable<Component> get children => [];
+}
+
+class SuperComponentPainter extends ComponentPainter {
+  final SuperComponent component;
+  const SuperComponentPainter(this.component);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    if (component is ComponentObject) {
+      canvas.translate(
+        (component as ComponentObject).x,
+        (component as ComponentObject).y,
+      );
+    }
+
+    for (var child in component.children) {
+      if (child is Paintable) {
+        (child as Paintable).painter().paint(canvas, size);
+      }
+    }
+    if (component is ComponentObject) {
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
 
 abstract class Component extends ListenerHandler<Component> {
   final UniqueKey key = UniqueKey();
@@ -27,13 +66,9 @@ abstract class Component extends ListenerHandler<Component> {
     parent?.notify(src ?? this);
   }
 
-  int get length => children.length;
-  Iterable<Component> get children => [];
-
   void read(Map<String, dynamic> map);
   Map<String, dynamic> toJson() => {'type': 'Component'};
 }
-
 
 class ComponentConnector {
   ComponentObject? p1, p2;
@@ -96,8 +131,9 @@ mixin ComponentObject {
   vec.Vector2 get vector => vec.Vector2(x, y);
 }
 
-abstract class Node extends Component with ComponentObject implements Paintable {
-
+abstract class Node extends Component
+    with ComponentObject
+    implements Paintable {
   @override
   NodePainter painter() => NodePainter(this);
 }
@@ -117,33 +153,31 @@ class NodePainter extends ComponentPainter {
 
     canvas.drawCircle(nd.offset, radius, nodePaint);
   }
-  
+
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
 abstract class Graph extends SuperComponent {
   List<Node> get listNodes;
-  
-  static final double Function(Node)
-    compMaxX = (nd) => nd.x,
-    compMinX = (nd) => -nd.x,
-    compMaxY = (nd) => nd.y,
-    compMinY = (nd) => -nd.y,
-    compMaxAbsX = (nd) => nd.x.abs(),
-    compMinAbsX = (nd) => -nd.x.abs(),
-    compMaxAbsY = (nd) => nd.y.abs(),
-    compMinAbsY = (nd) => -nd.y.abs();
+
+  static final double Function(Node) compMaxX = (nd) => nd.x,
+      compMinX = (nd) => -nd.x,
+      compMaxY = (nd) => nd.y,
+      compMinY = (nd) => -nd.y,
+      compMaxAbsX = (nd) => nd.x.abs(),
+      compMinAbsX = (nd) => -nd.x.abs(),
+      compMaxAbsY = (nd) => nd.y.abs(),
+      compMinAbsY = (nd) => -nd.y.abs();
 
   int argMax<T extends Comparable<T>>(T Function(Node) functor) {
     List<Node> ref = listNodes;
     if (ref.isEmpty) return -1;
-    
+
     var value = functor(ref[0]);
     int idx = 0;
     for (var i = 1; i < listNodes.length; i++) {
-      if (functor(ref[i]).compareTo(value) == 1)
-        idx = i;
+      if (functor(ref[i]).compareTo(value) == 1) idx = i;
     }
     return idx;
   }
@@ -153,5 +187,4 @@ abstract class Graph extends SuperComponent {
     if (idx == -1) return null;
     return listNodes[idx];
   }
-
 }

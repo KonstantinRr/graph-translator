@@ -17,11 +17,10 @@ Iterable<E> mapIndexed<E, T>(
   }
 }
 
-
 class ListenerHandler<T> {
   dynamic listenerData;
 
-  void notifyListeners(T? event) {
+  void notifyListeners(T event) {
     if (listenerData is void Function(T))
       listenerData(event);
     else if (listenerData is List) {
@@ -34,7 +33,8 @@ class ListenerHandler<T> {
       listenerData = <void Function(T)>[listenerData, listener];
     } else if (listenerData is List) {
       listenerData.add(listener);
-    } else { // null case
+    } else {
+      // null case
       listenerData = listener;
     }
   }
@@ -54,20 +54,6 @@ class ListenerHandler<T> {
   T? get lastEvent => null;
 }
 
-
-mixin LastAccessibleListenerImplementer<T> on ListenerHandler<T> {
-  T? _lastEvent;
-
-  @override
-  void notifyListeners(T? event) {
-    _lastEvent = event;
-    super.notifyListeners(event);
-  }
-
-  T? get lastEvent => _lastEvent;
-}
-
-
 abstract class LastAccessibleStream<T> extends ListenerHandler<T> {
   late final StreamSubscription subscription;
 
@@ -77,8 +63,7 @@ abstract class LastAccessibleStream<T> extends ListenerHandler<T> {
     });
   }
 
-  void dispose() =>
-    subscription.cancel();
+  void dispose() => subscription.cancel();
 
   Stream<T> get stream;
   T? get lastEvent;
@@ -134,6 +119,39 @@ class CombinedStream extends LastAccessibleStream<List> {
   Stream<List> get stream => _outController.stream;
 }
 
+class EventValueBuilder<T extends Listenable> extends StatefulWidget {
+  final T notifier;
+  final Widget Function(BuildContext, T) builder;
+
+  const EventValueBuilder(
+      {required this.notifier, required this.builder, Key? key})
+      : super(key: key);
+
+  @override
+  EventValueBuilderState<T> createState() => EventValueBuilderState<T>();
+}
+
+class EventValueBuilderState<T extends Listenable>
+    extends State<EventValueBuilder<T>> {
+  @override
+  void initState() {
+    super.initState();
+    widget.notifier.addListener(listen);
+  }
+
+  @override
+  void dispose() {
+    widget.notifier.removeListener(listen);
+    super.dispose();
+  }
+
+  void listen() => setState(() {});
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.builder(context, widget.notifier);
+  }
+}
 
 class EventStreamBuilder<T> extends StatelessWidget {
   final EventController<T> controller;

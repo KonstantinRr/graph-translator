@@ -72,17 +72,17 @@ class WidgetSingleComponentState extends State<WidgetSingleComponent> {
       children: [
         child,
         Padding(
-          padding: EdgeInsets.only(left: 10.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: component.children
-                .take(currentMaxLength)
-                .map((comp) => WidgetSingleComponent(
-                      component: comp,
-                    ))
-                .toList(),
-          ),
-        ),
+            padding: EdgeInsets.only(left: 10.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: (component as SuperComponent)
+                  .children
+                  .take(currentMaxLength)
+                  .map((comp) => WidgetSingleComponent(
+                        component: comp,
+                      ))
+                  .toList(),
+            )),
         Padding(
           padding: EdgeInsets.only(left: 10),
           child: Row(
@@ -129,13 +129,13 @@ class WidgetSingleComponentState extends State<WidgetSingleComponent> {
 
   @override
   Widget build(BuildContext context) {
-    var length = component.length;
     Widget object = Text(component.runtimeType.toString());
 
     return Container(
       child: Padding(
         padding: const EdgeInsets.only(left: 10.0),
-        child: length == 0 ? object : buildList(context, object),
+        child:
+            component is SuperComponent ? buildList(context, object) : object,
       ),
     );
   }
@@ -172,7 +172,8 @@ class WidgetComponentsState extends State<WidgetComponents> {
     if (value != null) value();
   }
 
-  static WidgetComponentsState? of(BuildContext context, {bool require = true}) {
+  static WidgetComponentsState? of(BuildContext context,
+      {bool require = true}) {
     var state = context.findAncestorStateOfType<WidgetComponentsState>();
     assert(!require || state != null, 'WidgetComponentsState must not be null');
     return state;
