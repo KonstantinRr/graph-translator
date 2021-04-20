@@ -15,19 +15,13 @@ class WidgetZoom extends StatelessWidget {
     return Row(
       children: [
         IconButton(
-          onPressed: () {
-            controller.updateViewState((v) {
-              return v..applyZoom(1.1);
-            });
-          },
+          onPressed: () =>
+            controller.translator.applyZoom(1.1),
           icon: Icon(Icons.zoom_in),
         ),
         IconButton(
-          onPressed: () {
-            controller.updateViewState((v) {
-              return v..applyZoom(1.0 / 1.1);
-            });
-          },
+          onPressed: () =>
+            controller.translator.applyZoom(1.0 / 1.1),
           icon: Icon(Icons.zoom_out),
         )
       ],

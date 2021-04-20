@@ -3,15 +3,11 @@
 /// The project was build by:
 /// Konstantin Rolf (S3750558) - k.rolf@student.rug.nl
 
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:graph_translator/main.dart';
 import 'package:graph_translator/state/graph.dart';
-import 'package:graph_translator/state/graph_directed.dart';
 import 'package:graph_translator/state_events.dart';
 import 'package:graph_translator/state_manager.dart';
 
@@ -19,8 +15,10 @@ class GraphTranslator extends ChangeNotifier {
   double _zoom;
   double _dx, _dy;
 
-  GraphTranslator({double zoom = 1.0, double dx = 0.0, double dy = 0.0}) :
-    _zoom = zoom, _dx = dx, _dy = dy;
+  GraphTranslator({double zoom = 1.0, double dx = 0.0, double dy = 0.0})
+      : _zoom = zoom,
+        _dx = dx,
+        _dy = dy;
 
   double get zoom => _zoom;
   double get dx => _dx;
@@ -35,7 +33,7 @@ class GraphTranslator extends ChangeNotifier {
     _dx = dx;
     notifyListeners();
   }
-  
+
   set dy(double dy) {
     _dy = dy;
     notifyListeners();
@@ -52,10 +50,9 @@ class GraphTranslator extends ChangeNotifier {
     notifyListeners();
   }
 
-
-
   Offset forward(Offset tx) => tx.translate(_dx, _dy).scale(_zoom, _zoom);
-  Offset reverse(Offset tx) => tx.scale(1 / _zoom, 1 / _zoom).translate(-_dx, -_dy);
+  Offset reverse(Offset tx) =>
+      tx.scale(1 / _zoom, 1 / _zoom).translate(-_dx, -_dy);
 
   Offset get offset => Offset(_dx, _dy);
   Size get size => Size(_dx, _dy);
@@ -68,12 +65,14 @@ class GraphTranslator extends ChangeNotifier {
 }
 
 class GraphPainter extends CustomPainter {
-  final GraphControllerState state;
+  final GraphController controller;
   final bool skipInvisible;
-  const GraphPainter(this.state, {this.skipInvisible = false});
+  const GraphPainter(this.controller, {this.skipInvisible = false});
 
-  GraphTranslator get translator => state.translator;
-  SuperComponent get graph => state.graph;
+  GraphTranslator get translator => controller.translator;
+  SelectionAreaNotifier get area => controller.area;
+  SelectionNotifier get selection => controller.selection;
+  SuperComponent? get graph => controller.state.component;
 
   Offset pointScale(Offset offset) {
     return Offset((offset.dx + translator.dx) * translator.zoom,
@@ -88,15 +87,19 @@ class GraphPainter extends CustomPainter {
     canvas.translate(-translator.dx, -translator.dy);
     canvas.scale(translator.zoom);
 
-    if (state.graph is Paintable) state.graph.painter().paint(canvas, size);
+    var settings = PaintSettings(controller.selection);
+    settings.addVar('nodeRadius', 8.0);
 
-    if (state.source != null && state.destination != null) {
+    if (graph is Paintable) {
+      graph!.painter(settings).paint(canvas, size);
+    }
+
+    var rect = area.rect;
+    if (rect != null) {
       var paint = Paint()
         ..color = Colors.blue.withOpacity(0.3)
         ..style = PaintingStyle.fill;
-      canvas.drawRect(
-          Rect.fromPoints(state.source as Offset, state.destination as Offset),
-          paint);
+      canvas.drawRect(rect, paint);
     }
 
     canvas.restore();
@@ -107,13 +110,32 @@ class GraphPainter extends CustomPainter {
 }
 
 class SelectionAreaNotifier extends ChangeNotifier {
+  Offset? _source, _destination;
+  SelectionAreaNotifier({Offset? source, Offset? destination})
+      : _source = source,
+        _destination = destination;
 
-  final Offset? _source, _destination;
-  SelectionAreaNotifier({Offset? source, Offset? destination}) : _source = source, _destination = destination;
-
-  Rect? get rect => _source != null && _destination != null ? Rect.fromPoints(_source!, _destination!) : null;
+  Rect? get rect => _source != null && _destination != null
+      ? Rect.fromPoints(_source!, _destination!)
+      : null;
   Offset? get source => _source;
   Offset? get destination => _destination;
+
+  set source(Offset? source) {
+    _source = source;
+    notifyListeners();
+  }
+
+  set destination(Offset? destination) {
+    _destination = destination;
+    notifyListeners();
+  }
+
+  void setAll(Offset? source, Offset? destination) {
+    _source = source;
+    _destination = destination;
+    notifyListeners();
+  }
 
   @override
   String toString() => 'source: $_source dest: $_destination';
@@ -180,44 +202,89 @@ class ActionController extends ChangeNotifier {
 }
 
 class SelectionNotifier extends ChangeNotifier {
-  List<Component> _selected;
+  Set<Component> _selected;
 
-  SelectionNotifier({List<Component>? selected}) : _selected = selected ?? [];
+  SelectionNotifier({Set<Component>? selected}) : _selected = selected ?? Set();
 
-  List<Component> get selected => _selected;
-  set selected(List<Component> selected) {
+  Set<Component> get selected => _selected;
+  set selected(Set<Component> selected) {
     _selected = selected;
     notifyListeners();
   }
 
-  void updateWith(dynamic Function(List<Component>) functor) {
+  void updateWith(dynamic Function(Set<Component>) functor) {
     var val = functor(_selected);
+    notifyListeners();
+  }
+
+  bool isSelected(Component comp) => _selected.contains(comp);
+  void select(Component comp) {
+    _selected.add(comp);
+    notifyListeners();
+  }
+
+  void deselectAll() {
+    _selected.clear();
+    notifyListeners();
+  }
+
+  void deselect(Component comp) {
+    _selected.remove(comp);
+    notifyListeners();
+  }
+
+  void changeSelect(Component comp) {
+    if (_selected.contains(comp)) {
+      _selected.remove(comp);
+    } else {
+      _selected.add(comp);
+    }
     notifyListeners();
   }
 }
 
 class GraphState extends ChangeNotifier {
-  SuperComponent _component;
+  SuperComponent? _component;
+
+  GraphState([this._component]);
+
+  SuperComponent? get component => _component;
+  set component(SuperComponent? component) {
+    _component = component;
+    notifyListeners();
+  }
+
+  void update(dynamic Function(SuperComponent?) functor) {
+    var val = functor(_component);
+    notifyListeners();
+  }
 }
 
 class GraphController {
-  EventController<GraphControllerState> _controller;
-  ActionController _action = ActionController();
+  GraphState state;
+  ActionController action = ActionController();
   SelectionNotifier selection = SelectionNotifier();
   SelectionAreaNotifier area = SelectionAreaNotifier();
   GraphTranslator translator = GraphTranslator();
-  ValueListenable<SuperComponent> _component = ValueListenable();
 
-  GraphController({SuperComponent? graph, GraphTranslator? translator})
-      : _controller = EventController(GraphControllerState(
-          graph ?? DirectedGraph(),
-          GraphTranslator(),
-          null,
-          null,
-        ));
+  GraphController({SuperComponent? graph}) : state = GraphState(graph);
+
+  void select() {
+    var rect = area.rect;
+    if (rect != null) {
+      var children = state.component?.findSelectedComponents(rect);
+      if (children != null && children.isNotEmpty) {
+        selection.selected = children;
+      }
+    }
+  }
 
   void dispose() {
-    _controller.dispose();
+    state.dispose();
+    action.dispose();
+    selection.dispose();
+    area.dispose();
+    translator.dispose();
   }
 }
 
@@ -234,42 +301,39 @@ class GraphWidget extends StatelessWidget {
         //onPointerDown: (event) { print('Down'); },
         //onPointerHover: (event) { print('Hover'); },
         onPointerUp: (upEvent) {
-          if (controller.selectionSource != null &&
-              controller.selectionDestination != null) {
-            var rect = Rect.fromPoints(
-                controller.selectionSource!, controller.selectionDestination!);
-            controller.g
-            //controller.
-          }
-          controller.selectionSource = null;
-          controller.selectionDestination = null;
+          controller.select();
+          controller.area.source = null;
+          controller.area.destination = null;
         },
         onPointerDown: (downEvent) {
           if (downEvent.buttons & kPrimaryMouseButton != 0) {
-            controller.selectionSource =
+            controller.selection.deselectAll();
+            controller.area.source =
                 controller.translator.forward(downEvent.localPosition);
           }
         },
         onPointerMove: (moveEvent) {
           if (moveEvent.buttons & kSecondaryMouseButton != 0) {
-            controller.updateViewState((view) {
-              return view
-                ..applyTranslation(
-                    -moveEvent.delta * controller.translator.zoom);
-            });
+            controller.translator.applyTranslation(
+                -moveEvent.delta * controller.translator.zoom);
           }
           if (moveEvent.buttons & kPrimaryMouseButton != 0) {
-            //print('Down 2');
-            controller.selectionDestination =
+            controller.area.destination =
                 controller.translator.forward(moveEvent.localPosition);
           }
         },
         behavior: HitTestBehavior.opaque,
-        child: EventStreamBuilder<GraphControllerState>(
-          controller: controller._controller,
-          builder: (context, data) {
+        child: EventValueBuilder.multiple(
+          notifiers: <ChangeNotifier>[
+            controller.action,
+            controller.area,
+            controller.selection,
+            controller.state,
+            controller.translator
+          ],
+          builder: (context) {
             return CustomPaint(
-              painter: GraphPainter(data),
+              painter: GraphPainter(controller),
             );
           },
         ),

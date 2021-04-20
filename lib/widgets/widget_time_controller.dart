@@ -42,9 +42,8 @@ class TimeControllerState extends State<WidgetTimeController> {
   void _onPlay() {
     periodic?.cancel();
     periodic = Timer.periodic(Duration(milliseconds: 200), (t) {
-      widget.controller.updateGraphState((g) {
+      widget.controller.state.update((g) {
         //g.simulatePositions(1);
-        return g;
       });
     });
   }

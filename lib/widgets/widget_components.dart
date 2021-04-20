@@ -167,7 +167,7 @@ class WidgetComponentsState extends State<WidgetComponents> {
 
   Component get component => widget.component;
 
-  void listener(Component component) {
+  void listener(Component? component) {
     var value = map[component];
     if (value != null) value();
   }

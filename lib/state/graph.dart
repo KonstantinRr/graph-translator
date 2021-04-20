@@ -6,6 +6,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:graph_translator/util.dart';
+import 'package:graph_translator/widgets/widget_graph.dart';
 
 import 'package:quiver/core.dart';
 import 'package:vector_math/vector_math.dart' as vec;
@@ -15,15 +17,16 @@ import 'package:graph_translator/state_events.dart';
 String typeToString<T>() => T.toString();
 
 abstract class SuperComponent extends Component implements Paintable {
-  List<Component> findSelectedComponents(Rect r) {
+  Set<Component> findSelectedComponents(Rect r) {
     return children
         .where((i) =>
             i is ComponentObject && r.contains((i as ComponentObject).offset))
-        .toList();
+        .toSet();
   }
 
   @override
-  ComponentPainter painter() => SuperComponentPainter(this);
+  ComponentPainter painter(PaintSettings settings) =>
+      SuperComponentPainter(settings, this);
 
   int get length => children.length;
   Iterable<Component> get children => [];
@@ -31,7 +34,8 @@ abstract class SuperComponent extends Component implements Paintable {
 
 class SuperComponentPainter extends ComponentPainter {
   final SuperComponent component;
-  const SuperComponentPainter(this.component);
+  const SuperComponentPainter(PaintSettings settings, this.component)
+      : super(settings);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -45,12 +49,29 @@ class SuperComponentPainter extends ComponentPainter {
 
     for (var child in component.children) {
       if (child is Paintable) {
-        (child as Paintable).painter().paint(canvas, size);
+        (child as Paintable).painter(settings).paint(canvas, size);
       }
     }
     if (component is ComponentObject) {
       canvas.restore();
     }
+  }
+
+  @override
+  Rect size() {
+    //MaxExtension.maxArg(component.children.where((element) => element is ).)
+    if (component.children.isEmpty) {
+      return component.children
+          .where((e) => e is Paintable)
+          .map((e) => (e as Paintable).painter(settings).size())
+          .reduce((value, element) => value.expandToInclude(element));
+    }
+    return component is ComponentObject
+        ? Rect.fromCenter(
+            center: (component as ComponentObject).offset,
+            width: 0.0,
+            height: 0.0)
+        : Rect.zero;
   }
 
   @override
@@ -98,12 +119,30 @@ mixin DirectedComponentConnector on ComponentConnector {
 }
 
 abstract class ComponentPainter extends CustomPainter {
-  const ComponentPainter();
+  final PaintSettings settings;
+  const ComponentPainter(this.settings);
+
+  Rect size();
+}
+
+class PaintSettings {
+  final SelectionNotifier selection;
+  final Map<String, dynamic> vars = {};
+  PaintSettings(this.selection);
+
+  void addVar(String key, dynamic variable) {
+    vars[key] = variable;
+  }
+
+  T? getVar<T>(String key) {
+    var value = vars[key];
+    return value is T ? value : null;
+  }
 }
 
 abstract class Paintable {
   const Paintable();
-  ComponentPainter painter();
+  ComponentPainter painter(PaintSettings settings);
 }
 
 mixin ComponentObject {
@@ -135,27 +174,71 @@ abstract class Node extends Component
     with ComponentObject
     implements Paintable {
   @override
-  NodePainter painter() => NodePainter(this);
+  NodePainter painter(PaintSettings settings) => NodePainter(settings, this);
 }
 
 class NodePainter extends ComponentPainter {
   final Node nd;
-  final double _radius;
-  const NodePainter(this.nd, {double radius = 5.0}) : _radius = radius;
+  final double? _radius;
+  const NodePainter(PaintSettings settings, this.nd, {double? radius})
+      : _radius = radius,
+        super(settings);
 
-  double get radius => _radius;
+  double get radius {
+    if (_radius != null) return _radius!;
+    var settingsVar = settings.getVar<double>('nodeRadius');
+    if (settingsVar != null) return settingsVar;
+    return 5.0;
+  }
+
+  Rect size() => Rect.fromCircle(center: nd.offset, radius: radius);
 
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(Canvas canvas, Size csize) {
+    /*
+    if (settings.selection.isSelected(nd)) {
+      var selectionPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = Colors.blue.withOpacity(0.4);
+      var rect = size();
+      canvas.drawRect(rect, selectionPaint);
+    }
+    */
+
     var nodePaint = Paint()
       ..style = PaintingStyle.fill
       ..color = Colors.black;
-
+    if (settings.selection.isSelected(nd)) {
+      nodePaint.color = Colors.lightBlue;
+    }
     canvas.drawCircle(nd.offset, radius, nodePaint);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class MaxExtension {
+  static Pair<int, T?> maxTuple<T extends Comparable<T>>(Iterable<T> iter) {
+    if (iter.isEmpty) return Pair(-1, null);
+
+    var iterator = iter.iterator;
+    iterator.moveNext();
+
+    var value = iterator.current;
+    int idx = 0;
+    for (var i = 1; iterator.moveNext(); i++) {
+      if (iterator.current.compareTo(value) == 1) {
+        idx = i;
+        value = iterator.current;
+      }
+    }
+    return Pair(idx, value);
+  }
+
+  static int argMax<T extends Comparable<T>>(Iterable<T> iter) =>
+      maxTuple(iter).t1;
+  static T? max<T extends Comparable<T>>(Iterable<T> iter) => maxTuple(iter).t2;
 }
 
 abstract class Graph extends SuperComponent {
@@ -169,22 +252,4 @@ abstract class Graph extends SuperComponent {
       compMinAbsX = (nd) => -nd.x.abs(),
       compMaxAbsY = (nd) => nd.y.abs(),
       compMinAbsY = (nd) => -nd.y.abs();
-
-  int argMax<T extends Comparable<T>>(T Function(Node) functor) {
-    List<Node> ref = listNodes;
-    if (ref.isEmpty) return -1;
-
-    var value = functor(ref[0]);
-    int idx = 0;
-    for (var i = 1; i < listNodes.length; i++) {
-      if (functor(ref[i]).compareTo(value) == 1) idx = i;
-    }
-    return idx;
-  }
-
-  Node? nodeMax<T extends Comparable<T>>(T Function(Node) functor) {
-    var idx = argMax<T>(functor);
-    if (idx == -1) return null;
-    return listNodes[idx];
-  }
 }

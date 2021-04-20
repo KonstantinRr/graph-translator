@@ -25,9 +25,8 @@ class WidgetGeneratorState extends State<WidgetGenerator> {
     var style = theme.textTheme.bodyText1?.copyWith(color: Colors.black);
     return ElevatedButton(
       onPressed: () {
-        widget.controller.updateGraphState((g) {
-          // TODO fix
-          return (g as DirectedGraph)
+        widget.controller.state.update((g) {
+          (g as DirectedGraph)
             ..random(
                 nodeCount: sliderNodes.round(),
                 connectionCount: sliderEdges.round());
@@ -122,10 +121,7 @@ class WidgetSimulate extends StatelessWidget {
     var theme = Theme.of(context);
     return ElevatedButton(
       onPressed: () {
-        controller.updateGraphState((g) {
-          //g.simulatePositions(1000);
-          return g;
-        });
+        
       },
       style: ElevatedButton.styleFrom(
         primary: Colors.white, // background

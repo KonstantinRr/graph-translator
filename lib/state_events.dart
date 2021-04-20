@@ -20,16 +20,16 @@ Iterable<E> mapIndexed<E, T>(
 class ListenerHandler<T> {
   dynamic listenerData;
 
-  void notifyListeners(T event) {
-    if (listenerData is void Function(T))
+  void notifyListeners(T? event) {
+    if (listenerData is void Function(T?))
       listenerData(event);
     else if (listenerData is List) {
       listenerData.forEach((e) => e(event));
     }
   }
 
-  void addListener(void Function(T) listener) {
-    if (listenerData is void Function(T)) {
+  void addListener(void Function(T?) listener) {
+    if (listenerData is void Function(T?)) {
       listenerData = <void Function(T)>[listenerData, listener];
     } else if (listenerData is List) {
       listenerData.add(listener);
@@ -39,7 +39,7 @@ class ListenerHandler<T> {
     }
   }
 
-  void removeListener(void Function(T) listener) {
+  void removeListener(void Function(T?) listener) {
     if (listener == listenerData) {
       listenerData = null;
     } else if (listenerData is List) {
@@ -120,12 +120,17 @@ class CombinedStream extends LastAccessibleStream<List> {
 }
 
 class EventValueBuilder<T extends Listenable> extends StatefulWidget {
-  final T notifier;
-  final Widget Function(BuildContext, T) builder;
+  final dynamic notifier;
+  final Widget Function(BuildContext) builder;
 
   const EventValueBuilder(
-      {required this.notifier, required this.builder, Key? key})
-      : super(key: key);
+      {required T notifier, required this.builder, Key? key})
+      : notifier = notifier, super(key: key);
+    
+  const EventValueBuilder.multiple(
+    {required List<T> notifiers, required this.builder, Key? key})
+    : notifier = notifiers, super(key: key);
+
 
   @override
   EventValueBuilderState<T> createState() => EventValueBuilderState<T>();
@@ -136,12 +141,20 @@ class EventValueBuilderState<T extends Listenable>
   @override
   void initState() {
     super.initState();
-    widget.notifier.addListener(listen);
+    if (widget.notifier is List) {
+      widget.notifier.forEach((e) => e.addListener(listen));
+    } else {
+      widget.notifier.addListener(listen);
+    }
   }
 
   @override
   void dispose() {
-    widget.notifier.removeListener(listen);
+    if (widget.notifier is List) {
+      widget.notifier.forEach((e) => e.removeListener(listen));
+    } else {
+      widget.notifier.removeListener(listen);
+    }
     super.dispose();
   }
 
@@ -149,7 +162,7 @@ class EventValueBuilderState<T extends Listenable>
 
   @override
   Widget build(BuildContext context) {
-    return widget.builder(context, widget.notifier);
+    return widget.builder(context);
   }
 }
 

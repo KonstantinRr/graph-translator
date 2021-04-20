@@ -366,27 +366,27 @@ class _ProtoBarHeader extends StatelessWidget implements PreferredSizeWidget {
             ),
             EventValueBuilder<ActionController>(
               notifier: controller.action,
-              builder: (context, data) {
+              builder: (context) {
                 return Row(
                   children: <Widget>[
                     IconButton(
                       icon: Icon(Icons.arrow_back),
-                      color: data.canUndo ? Colors.black : Colors.grey,
+                      color: controller.action.canUndo ? Colors.black : Colors.grey,
                       tooltip: 'Undo',
-                      onPressed: !data.canUndo
+                      onPressed: !controller.action.canUndo
                           ? null
                           : () {
-                              if (data.canUndo) {}
+                              if (controller.action.canUndo) {}
                             },
                     ),
                     IconButton(
                       icon: Icon(Icons.arrow_forward),
-                      color: data.canRedo ? Colors.black : Colors.grey,
+                      color: controller.action.canRedo ? Colors.black : Colors.grey,
                       tooltip: 'Redo',
-                      onPressed: !data.canRedo
+                      onPressed: !controller.action.canRedo
                           ? null
                           : () {
-                              if (data.canRedo) {}
+                              if (controller.action.canRedo) {}
                             },
                     ),
                   ],

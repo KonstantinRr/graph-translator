@@ -12,8 +12,11 @@ import 'package:graph_translator/state/graph.dart';
 class UndirectedNode extends Node {
   List<UndirectedEdge> edges;
 
-  UndirectedNode({double ?x, double ?y, List<UndirectedEdge>? edges,})
-      : edges = edges ?? [] {
+  UndirectedNode({
+    double? x,
+    double? y,
+    List<UndirectedEdge>? edges,
+  }) : edges = edges ?? [] {
     setCoords(x, y);
   }
 
@@ -28,8 +31,7 @@ class UndirectedNode extends Node {
   /// Returns the edge idx that connects this to nd
   UndirectedEdge? edgeTo(UndirectedNode nd) {
     for (var element in edges)
-      if (element.p1 == nd || element.p2 == nd)
-        return element;
+      if (element.p1 == nd || element.p2 == nd) return element;
     return null;
   }
 
@@ -44,7 +46,8 @@ class UndirectedNode extends Node {
 
 class UndirectedEdgePainter extends ComponentPainter {
   final UndirectedEdge edge;
-  const UndirectedEdgePainter(this.edge);
+  const UndirectedEdgePainter(PaintSettings settings, this.edge)
+      : super(settings);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -61,13 +64,25 @@ class UndirectedEdgePainter extends ComponentPainter {
   }
 
   @override
+  Rect size() {
+    return edge.p1 != null && edge.p2 != null
+        ? Rect.fromPoints(
+            edge.p1!.offset,
+            edge.p2!.offset,
+          )
+        : Rect.zero;
+  }
+
+  @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
 abstract class UndirectedEdge extends Component
-    with ComponentConnector, UndirectedComponentConnector implements Paintable{
+    with ComponentConnector, UndirectedComponentConnector
+    implements Paintable {
   @override
-  UndirectedEdgePainter painter() => UndirectedEdgePainter(this);
+  UndirectedEdgePainter painter(PaintSettings settings) =>
+      UndirectedEdgePainter(settings, this);
 }
 
 class UndirectedUnweightedEdge extends UndirectedEdge {
@@ -104,7 +119,6 @@ class UndirectedWeightedEdge extends UndirectedEdge {
       };
 }
 
-
 abstract class GraphUndirected extends Graph {
   List<UndirectedNode> nodes = [];
 
@@ -115,7 +129,7 @@ abstract class GraphUndirected extends Graph {
     if (!(edge.p1 is UndirectedNode) || !(edge.p2 is UndirectedNode))
       throw FormatException('Edge must point to instance of UndirectedNode');
     UndirectedNode p1 = edge.p1 as UndirectedNode,
-      p2 = edge.p2 as UndirectedNode;
+        p2 = edge.p2 as UndirectedNode;
     var nd1Idx = p1.edgeIdxTo(p2);
     var nd2Idx = p2.edgeIdxTo(p1);
 
@@ -132,7 +146,8 @@ abstract class GraphUndirected extends Graph {
   }
 
   UndirectedNode createNode() => UndirectedNode();
-  UndirectedEdge createEdge(UndirectedNode n1, UndirectedNode n2) => UndirectedUnweightedEdge(n1, n2);
+  UndirectedEdge createEdge(UndirectedNode n1, UndirectedNode n2) =>
+      UndirectedUnweightedEdge(n1, n2);
 
   @override
   Iterable<Component> get children => nodes;
