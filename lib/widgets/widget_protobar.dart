@@ -313,8 +313,9 @@ class _ProtoBarContent extends StatefulWidget {
 
 class _ProtoBarContentState extends State<_ProtoBarContent>
     with SingleTickerProviderStateMixin {
+  _ProtoBarManagerState? state;
   late final AnimationController controller;
-  late StreamSubscription subscription;
+  late Animation<double> size, opacity;
 
   @override
   void initState() {
@@ -323,22 +324,116 @@ class _ProtoBarContentState extends State<_ProtoBarContent>
       duration: Duration(milliseconds: 500),
       vsync: this,
     );
+
+    size = Tween(begin: 70.0, end: 0.0).animate(CurvedAnimation(
+      curve: Interval(
+        0.6,
+        1.0,
+        curve: Curves.easeInOut,
+      ),
+      parent: controller,
+    ));
+    opacity = Tween(begin: 1.0, end: 0.0).animate(CurvedAnimation(
+      curve: Interval(
+        0.0,
+        0.4,
+        curve: Curves.easeInOut,
+      ),
+      parent: controller,
+    ));
   }
 
-  void clearState() {
-    //subscription.cancel();
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    state?.state.removeListener(listen);
+    state = _ProtoBarManagerState.of(context);
+    state?.state.addListener(listen);
   }
 
   @override
   void dispose() {
-    clearState();
+    state?.state.removeListener(listen);
     controller.dispose();
     super.dispose();
   }
 
+  void listen() {
+    switch (state?.state.value) {
+      case _ProtoBarState.Open:
+        controller.reverse();
+        break;
+      case _ProtoBarState.Close:
+        controller.forward();
+        break;
+      default:
+    }
+  }
+
+  Widget buildTools(BuildContext context) {
+    Widget Function(BuildContext, String, void Function()) builder =
+        (context, name, onPressed) {
+      return SizedBox(
+        height: 70.0,
+        width: 120.0,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            primary: Colors.white,
+            onPrimary: Colors.black,
+          ),
+          onPressed: onPressed,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.grid_on),
+              Text(name),
+            ],
+          ),
+        ),
+      );
+    };
+
+    return Row(
+      children: [
+        builder(context, 'DeGroot', () {}),
+        builder(context, 'Threshold', () {}),
+        builder(context, 'SIS', () {}),
+        builder(context, 'SIR', () {}),
+      ],
+    );
+  }
+
+  Widget buildModels(BuildContext context) {
+    return Container();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container();
+    var state = _ProtoBarManagerState.of(context)!;
+    return AnimatedBuilder(
+      animation: size,
+      child: EventValueBuilder(
+        notifier: state.event,
+        builder: (context) {
+          switch (state.event.value.value) {
+            case _TSRAppBar.Design:
+              return buildTools(context);
+            case _TSRAppBar.Prototype:
+              return buildModels(context);
+          }
+        },
+      ),
+      builder: (context, child) {
+        return SizedBox(
+          height: size.value,
+          width: double.infinity,
+          child: Opacity(
+            opacity: opacity.value,
+            child: child,
+          ),
+        );
+      },
+    );
   }
 }
 
