@@ -8,6 +8,9 @@ import 'package:graph_translator/state/graph.dart';
 import 'package:graph_translator/state_events.dart';
 
 abstract class ReversibleEvent {
+  const ReversibleEvent();
+
+  ReversibleEvent? combine(ReversibleEvent event);
   void forward();
   void reverse();
 }
@@ -48,8 +51,7 @@ class StateManagerProvider extends InheritedWidget {
 class StateManagerWidget extends StatefulWidget {
   final Widget child;
 
-  const StateManagerWidget({required this.child,
-    Key? key}) : super(key: key);
+  const StateManagerWidget({required this.child, Key? key}) : super(key: key);
 
   @override
   StateManagerWidgetState createState() => StateManagerWidgetState();

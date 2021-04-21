@@ -11,6 +11,61 @@ import 'package:graph_translator/state/graph.dart';
 import 'package:graph_translator/state_events.dart';
 import 'package:graph_translator/state_manager.dart';
 
+class ComponentMoveAction implements ReversibleEvent {
+  final ComponentObject nd;
+  final Offset offset;
+
+  const ComponentMoveAction(this.nd, this.offset);
+
+  ReversibleEvent? combine(ReversibleEvent e) {
+    return (e is ComponentMoveAction && e.nd == nd)
+        ? ComponentMoveAction(nd, offset + e.offset)
+        : null;
+  }
+
+  @override
+  void forward() {
+    nd.applyTranslation(offset);
+  }
+
+  @override
+  void reverse() {
+    nd.applyTranslation(-offset);
+  }
+}
+
+class ComponentsMoveAction implements ReversibleEvent {
+  final Set<ComponentObject> nds;
+  final Offset offset;
+
+  ComponentsMoveAction(this.nds, this.offset);
+
+  @override
+  ReversibleEvent? combine(ReversibleEvent event) {
+    if (event is ComponentsMoveAction) {
+      return setEquals(nds, event.nds)
+          ? ComponentsMoveAction(nds, offset + event.offset)
+          : null;
+    }
+    if (event is ComponentMoveAction &&
+        nds.length == 1 &&
+        nds.first == event.nd) {
+      return ComponentMoveAction(event.nd, offset + event.offset);
+    }
+    return null;
+  }
+
+  @override
+  void forward() {
+    nds.forEach((element) => element.applyTranslation(offset));
+  }
+
+  @override
+  void reverse() {
+    nds.forEach((element) => element.applyTranslation(-offset));
+  }
+}
+
 class GraphTranslator extends ChangeNotifier {
   double _zoom;
   double _dx, _dy;
@@ -73,6 +128,7 @@ class GraphPainter extends CustomPainter {
   SelectionAreaNotifier get area => controller.area;
   SelectionNotifier get selection => controller.selection;
   SuperComponent? get graph => controller.state.component;
+  PaintSettings get settings => controller.settings;
 
   Offset pointScale(Offset offset) {
     return Offset((offset.dx + translator.dx) * translator.zoom,
@@ -86,9 +142,6 @@ class GraphPainter extends CustomPainter {
     //canvas.scale(1.0 / max(size.width, size.height));
     canvas.translate(-translator.dx, -translator.dy);
     canvas.scale(translator.zoom);
-
-    var settings = PaintSettings(controller.selection);
-    settings.addVar('nodeRadius', 8.0);
 
     if (graph is Paintable) {
       graph!.painter(settings).paint(canvas, size);
@@ -146,7 +199,6 @@ class ActionController extends ChangeNotifier {
 
   void executeEvent(ReversibleEvent event) {
     event.forward();
-    undoStack.add(event);
     // clears the redo stack
     if (redoStack.isNotEmpty) {
       if (event == redoStack.last) {
@@ -154,6 +206,13 @@ class ActionController extends ChangeNotifier {
       } else {
         redoStack.clear();
       }
+    }
+    ReversibleEvent? combined;
+    if (undoStack.isNotEmpty &&
+        (combined = undoStack.last.combine(event)) != null) {
+      undoStack.last = combined!;
+    } else {
+      undoStack.add(event);
     }
     notifyListeners();
   }
@@ -212,6 +271,9 @@ class SelectionNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool get isEmtpy => _selected.isEmpty;
+  bool get isNotEmtpy => _selected.isNotEmpty;
+
   void updateWith(dynamic Function(Set<Component>) functor) {
     var val = functor(_selected);
     notifyListeners();
@@ -266,17 +328,32 @@ class GraphController {
   SelectionNotifier selection = SelectionNotifier();
   SelectionAreaNotifier area = SelectionAreaNotifier();
   GraphTranslator translator = GraphTranslator();
+  late PaintSettings settings;
 
-  GraphController({SuperComponent? graph}) : state = GraphState(graph);
+  GraphController({SuperComponent? graph}) : state = GraphState(graph) {
+    settings = PaintSettings(selection);
+    settings.addVar('nodeRadius', 8.0);
+  }
 
   void select() {
     var rect = area.rect;
     if (rect != null) {
-      var children = state.component?.findSelectedComponents(rect);
+      var children = state.component?.findSelectedComponents(settings, rect);
       if (children != null && children.isNotEmpty) {
         selection.selected = children;
       }
     }
+  }
+
+  List<Component>? hittest(Offset offset) {
+    var translated = translator.forward(offset);
+    return state.component?.hitTest(settings, translated);
+  }
+
+  void remove() {
+    state.update((comp) {
+      comp?.removeComponents(selection.selected);
+    });
   }
 
   void dispose() {
@@ -288,38 +365,126 @@ class GraphController {
   }
 }
 
-class GraphWidget extends StatelessWidget {
+class GraphWidget extends StatefulWidget {
   final GraphController controller;
 
   GraphWidget({required this.controller, Key? key}) : super(key: key);
+
+  @override
+  GraphWidgetState createState() => GraphWidgetState();
+}
+
+class GraphWidgetState extends State<GraphWidget> {
+  OverlayEntry? _entry;
+  bool toInsert = false;
+  List<Component>? toSelect;
+
+  GraphController get controller => widget.controller;
+
+  void insert(double x, double y) {
+    _entry?.remove();
+    _entry = OverlayEntry(builder: (context) {
+      var buttonTextStyle = TextButton.styleFrom(primary: Colors.black);
+      return Positioned(
+        top: y,
+        left: x,
+        width: 120,
+        child: Container(
+          color: Colors.white,
+          child: Material(
+            type: MaterialType.transparency,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextButton(
+                  style: buttonTextStyle,
+                  onPressed: () => controller.remove(),
+                  child: Text('Remove'),
+                ),
+                TextButton(
+                  style: buttonTextStyle,
+                  onPressed: () {},
+                  child: Text('Add'),
+                ),
+                TextButton(
+                  style: buttonTextStyle,
+                  onPressed: () {},
+                  child: Text('Connect'),
+                )
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+    Overlay.of(context)?.insert(_entry!);
+  }
+
+  void remove() {
+    _entry?.remove();
+    _entry = null;
+  }
+
+  @override
+  void dispose() {
+    _entry?.remove();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       constraints: BoxConstraints.expand(),
       child: Listener(
-        //onPointerDown: (event) { print('Down'); },
-        //onPointerHover: (event) { print('Hover'); },
         onPointerUp: (upEvent) {
           controller.select();
           controller.area.source = null;
           controller.area.destination = null;
+          if (toInsert) {
+            insert(upEvent.localPosition.dx, upEvent.localPosition.dy);
+            toInsert = false;
+          }
+          if (toSelect != null && toSelect!.isNotEmpty) {
+            controller.selection.selected = toSelect!.toSet();
+          }
         },
         onPointerDown: (downEvent) {
+          if (downEvent.buttons & kSecondaryMouseButton != 0) {
+            // we want to open a dialog on short tap
+            toInsert = true;
+          }
           if (downEvent.buttons & kPrimaryMouseButton != 0) {
-            controller.selection.deselectAll();
-            controller.area.source =
-                controller.translator.forward(downEvent.localPosition);
+            // remove the overlayentry in every case
+            remove();
+            // check if we tapped any explicit components
+            toSelect = controller.hittest(downEvent.localPosition);
+            if (toSelect == null || toSelect!.isEmpty) {
+              controller.selection.deselectAll();
+              controller.area.source =
+                  controller.translator.forward(downEvent.localPosition);
+            }
           }
         },
         onPointerMove: (moveEvent) {
+          toInsert = false;
+          toSelect = null;
+          remove();
           if (moveEvent.buttons & kSecondaryMouseButton != 0) {
             controller.translator.applyTranslation(
                 -moveEvent.delta * controller.translator.zoom);
           }
           if (moveEvent.buttons & kPrimaryMouseButton != 0) {
-            controller.area.destination =
-                controller.translator.forward(moveEvent.localPosition);
+            if (controller.selection.isNotEmtpy) {
+              var movable = controller.selection.selected
+                  .where((element) => element is ComponentObject)
+                  .map((e) => e as ComponentObject)
+                  .toSet();
+              controller.action
+                  .executeEvent(ComponentsMoveAction(movable, moveEvent.delta));
+            } else {
+              controller.area.destination =
+                  controller.translator.forward(moveEvent.localPosition);
+            }
           }
         },
         behavior: HitTestBehavior.opaque,

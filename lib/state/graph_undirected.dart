@@ -6,7 +6,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:fraction/fraction.dart';
-
 import 'package:graph_translator/state/graph.dart';
 
 class UndirectedNode extends Node {
@@ -44,34 +43,11 @@ class UndirectedNode extends Node {
       };
 }
 
-class UndirectedEdgePainter extends ComponentPainter {
-  final UndirectedEdge edge;
-  const UndirectedEdgePainter(PaintSettings settings, this.edge)
-      : super(settings);
+class UndirectedEdgePainter extends EdgePainter {
+  const UndirectedEdgePainter(PaintSettings settings, UndirectedEdge edge)
+      : super(settings, edge);
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    var edgePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..color = Colors.black;
-
-    if (edge.p1 != null && edge.p2 != null)
-      canvas.drawLine(
-        edge.p1!.offset,
-        edge.p2!.offset,
-        edgePaint,
-      );
-  }
-
-  @override
-  Rect size() {
-    return edge.p1 != null && edge.p2 != null
-        ? Rect.fromPoints(
-            edge.p1!.offset,
-            edge.p2!.offset,
-          )
-        : Rect.zero;
-  }
+  UndirectedEdge get edge => connector as UndirectedEdge;
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
@@ -100,11 +76,10 @@ class UndirectedUnweightedEdge extends UndirectedEdge {
       };
 }
 
-class UndirectedWeightedEdge extends UndirectedEdge {
-  Fraction weight;
+class UndirectedWeightedEdge extends UndirectedEdge with Weighted {
   UndirectedWeightedEdge(UndirectedNode v1, UndirectedNode v2,
-      [Fraction? weight])
-      : weight = weight ?? Fraction(1) {
+      [Fraction? weight]) {
+    setWeightIf(weight);
     setComponents(v1, v2);
   }
 
@@ -119,11 +94,27 @@ class UndirectedWeightedEdge extends UndirectedEdge {
       };
 }
 
-abstract class GraphUndirected extends Graph {
-  List<UndirectedNode> nodes = [];
+class GraphUndirected extends Graph {
+  final List<UndirectedNode> nodes;
+
+  GraphUndirected([List<UndirectedNode>? nodes]) : nodes = nodes ?? [];
 
   @override
   List<Node> get listNodes => nodes;
+
+  void removeComponent(Component component) {
+    if (component is UndirectedNode) {
+      var result = nodes.remove(component);
+      // removes subcomponents
+      if (result) {
+        component.edges.forEach((element) {
+          (element.p1 as UndirectedNode).edges.remove(element);
+          (element.p2 as UndirectedNode).edges.remove(element);
+        });
+        component.edges.clear();
+      }
+    }
+  }
 
   bool addEdge(UndirectedEdge edge, {bool replace = true}) {
     if (!(edge.p1 is UndirectedNode) || !(edge.p2 is UndirectedNode))

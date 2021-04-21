@@ -6,6 +6,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:fraction/fraction.dart';
 import 'package:graph_translator/util.dart';
 import 'package:graph_translator/widgets/widget_graph.dart';
 
@@ -17,11 +18,24 @@ import 'package:graph_translator/state_events.dart';
 String typeToString<T>() => T.toString();
 
 abstract class SuperComponent extends Component implements Paintable {
-  Set<Component> findSelectedComponents(Rect r) {
+  Set<Component> findSelectedComponents(PaintSettings settings, Rect r) {
     return children
         .where((i) =>
             i is ComponentObject && r.contains((i as ComponentObject).offset))
         .toSet();
+  }
+
+  List<Component> hitTest(PaintSettings settings, Offset offset) {
+    return children
+        .where((e) =>
+            e is Paintable &&
+            ((e as Paintable).painter(settings).size().contains(offset)))
+        .toList();
+  }
+
+  void removeComponent(Component component);
+  void removeComponents(Set<Component> components) {
+    components.forEach((element) => removeComponent(element));
   }
 
   @override
@@ -113,9 +127,8 @@ mixin DirectedComponentConnector on ComponentConnector {
   ComponentObject? get destination => p2;
 
   bool operator ==(o) =>
-      o is UndirectedComponentConnector && p1 == p2 || p2 == p1;
-  int get hashCode =>
-      hash2(p1.hashCode, p2.hashCode) ^ hash2(p2.hashCode, p1.hashCode);
+      o is DirectedComponentConnector && ((p1 == o.p1 && p2 == o.p2));
+  int get hashCode => hash2(p1.hashCode, p2.hashCode);
 }
 
 abstract class ComponentPainter extends CustomPainter {
@@ -137,6 +150,11 @@ class PaintSettings {
   T? getVar<T>(String key) {
     var value = vars[key];
     return value is T ? value : null;
+  }
+
+  T getVarAlternative<T>(String key, T alternative) {
+    var value = vars[key];
+    return value is T ? value : alternative;
   }
 }
 
@@ -161,8 +179,9 @@ mixin ComponentObject {
     y = rand.nextDouble() * region.height + region.top;
   }
 
-  void applyTranslation(Canvas canvas) {
-    canvas.translate(x, y);
+  void applyTranslation(Offset offset) {
+    x += offset.dx;
+    y += offset.dy;
   }
 
   Offset get offset => Offset(x, y);
@@ -239,6 +258,83 @@ class MaxExtension {
   static int argMax<T extends Comparable<T>>(Iterable<T> iter) =>
       maxTuple(iter).t1;
   static T? max<T extends Comparable<T>>(Iterable<T> iter) => maxTuple(iter).t2;
+}
+
+abstract class EdgePainter extends ComponentPainter {
+  final ComponentConnector connector;
+  const EdgePainter(PaintSettings settings, this.connector) : super(settings);
+
+  void drawText(Canvas canvas, Fraction weight, Offset center) {
+    var text = weight.toDouble().toStringAsFixed(2);
+    var span = TextSpan(
+      style: TextStyle(color: Colors.grey[600]),
+      text: text,
+    );
+    var tp = TextPainter(
+        text: span,
+        textAlign: TextAlign.left,
+        textDirection: TextDirection.ltr);
+    tp.layout();
+    tp.paint(canvas, center);
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    var edgePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..color = Colors.black;
+
+    if (connector.p1 != null && connector.p2 != null) {
+      if (connector.p1 == connector.p2) {
+        // recursive arrow (p1 == p2)
+        var offset = connector.p1!.offset;
+
+        canvas.drawOval(
+          Rect.fromPoints(offset, offset + Offset(20.0, 20.0)),
+          edgePaint,
+        );
+
+        if (connector is Weighted) {
+          drawText(
+            canvas,
+            (connector as Weighted).weight,
+            offset + Offset(20.0, 20.0),
+          );
+        }
+      } else {
+        canvas.drawLine(
+          connector.p1!.offset,
+          connector.p2!.offset,
+          edgePaint,
+        );
+        if (connector is Weighted) {
+          var center = (connector.p1!.vector + connector.p2!.vector)
+            ..scale(0.5);
+          drawText(canvas, (connector as Weighted).weight, center.toOffset());
+        }
+      }
+    }
+  }
+
+  @override
+  Rect size() {
+    return connector.p1 != null && connector.p2 != null
+        ? (connector.p1 == connector.p2
+            ? Rect.fromPoints(
+                connector.p1!.offset,
+                connector.p2!.offset,
+              )
+            : connector.p1!.offset & Size(20.0, 20.0))
+        : Rect.zero;
+  }
+}
+
+mixin Weighted {
+  Fraction weight = Fraction(1);
+
+  void setWeightIf(Fraction? newWeight) {
+    if (newWeight != null) weight = newWeight;
+  }
 }
 
 abstract class Graph extends SuperComponent {

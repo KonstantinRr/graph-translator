@@ -3,6 +3,8 @@
 /// The project was build by:
 /// Konstantin Rolf (S3750558) - k.rolf@student.rug.nl
 
+import 'dart:ui';
+
 import 'package:fraction/fraction.dart';
 import 'dart:math' as math;
 
@@ -62,12 +64,25 @@ class DirectedNode extends Node {
   Map<String, dynamic> toJson() => {'type': typeToString<DirectedNode>()};
 }
 
-class DirectedEdgePainter extends ComponentPainter {
-  final DirectedEdge edge;
-  final double arrowWidth, arrowLength;
-  const DirectedEdgePainter(PaintSettings settings, this.edge,
-      {this.arrowWidth = 5.0, this.arrowLength = 5.0})
-      : super(settings);
+class DirectedEdgePainter extends EdgePainter {
+  final double? _arrowWidth, _arrowLength;
+  const DirectedEdgePainter(PaintSettings settings, DirectedEdge edge,
+      {double? arrowWidth, double? arrowLength})
+      : _arrowWidth = arrowWidth,
+        _arrowLength = arrowLength,
+        super(settings, edge);
+
+  DirectedEdge get edge => connector as DirectedEdge;
+
+  double get arrowWidth {
+    if (_arrowWidth != null) return _arrowWidth!;
+    return settings.getVarAlternative<double>('arrowWidth', 5.0);
+  }
+
+  double get arrowLength {
+    if (_arrowLength != null) return _arrowLength!;
+    return settings.getVarAlternative<double>('arrowLength', 5.0);
+  }
 
   double getSize() {
     if (edge.destination is Paintable) {
@@ -79,12 +94,9 @@ class DirectedEdgePainter extends ComponentPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    super.paint(canvas, size);
     if (edge.source != null && edge.destination != null) {
       var stopDistance = getSize();
-
-      var edgePaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..color = Colors.black;
 
       var arrowPaint = Paint()
         ..style = PaintingStyle.fill
@@ -94,7 +106,6 @@ class DirectedEdgePainter extends ComponentPainter {
           (edge.source!.vector - edge.destination!.vector).normalized();
       var stopVector = connector.scaled(stopDistance);
       var dest = (edge.destination!.vector + stopVector);
-      var src = (edge.source!.vector - stopVector);
 
       var cross =
           vec.Vector2(-arrowWidth * connector.y, arrowWidth * connector.x);
@@ -108,19 +119,8 @@ class DirectedEdgePainter extends ComponentPainter {
       path.lineTo(q2.x, q2.y);
       path.close();
 
-      canvas.drawLine(src.toOffset(), dest.toOffset(), edgePaint);
       canvas.drawPath(path, arrowPaint);
     }
-  }
-
-  @override
-  Rect size() {
-    return edge.source != null && edge.destination != null
-        ? Rect.fromPoints(
-            edge.source!.offset,
-            edge.destination!.offset,
-          )
-        : Rect.zero;
   }
 
   @override
@@ -137,12 +137,10 @@ abstract class DirectedEdge extends Component
 }
 
 /// A weigthed implementation of [DirectedEdge]
-class DirectedWeightedEdge extends DirectedEdge {
-  Fraction weight;
-
+class DirectedWeightedEdge extends DirectedEdge with Weighted {
   DirectedWeightedEdge(DirectedNode source, DirectedNode destination,
-      [Fraction? weight])
-      : weight = weight ?? Fraction(1) {
+      [Fraction? weight]) {
+    setWeightIf(weight);
     setComponents(source, destination);
   }
 
@@ -182,7 +180,29 @@ class DirectedGraph extends Graph implements Paintable {
 
   DirectedNode createNode() => DirectedNode();
   DirectedEdge createdEdge(DirectedNode n1, DirectedNode n2) =>
-      DirectedUnweightedEdge(n1, n2);
+      DirectedWeightedEdge(n1, n2);
+
+  @override
+  void removeComponent(Component component) {
+    if (component is DirectedNode) {
+      var removed = nodes.remove(component);
+      // Removes the sub components and connections
+      if (removed) {
+        var b1 = component.inEdges
+            .map((element) =>
+                (element.source as DirectedNode).outEdges.remove(element))
+            .any((e) => !e); // any which was not found
+        var b2 = component.outEdges
+            .map((element) =>
+                (element.destination as DirectedNode).inEdges.remove(element))
+            .any((e) => !e);
+        component.inEdges.clear();
+        component.outEdges.clear();
+        assert(!b1, 'Value not in source');
+        assert(!b2, 'Value not in destination');
+      }
+    }
+  }
 
   /// Creates a randomized graph with the given node and connection count.
   /// The default [nodeCount] is 10, the default [connectionCount] is 20
@@ -258,6 +278,12 @@ class DirectedGraphPainter extends SuperComponentPainter {
   void paint(Canvas canvas, Size size) {
     // perform rendering
     for (var node in directed.nodes) {
+      // render all edges to other nodes
+      for (var edge in node.outEdges) {
+        edge.painter(settings).paint(canvas, size);
+      }
+    }
+    for (var node in directed.nodes) {
       if (skipInvisible) {
         //Rect renderRect = Rect.fromPoints(
         //  pointScale(Offset.zero), pointScale(Offset(size.width, size.height)));
@@ -269,10 +295,6 @@ class DirectedGraphPainter extends SuperComponentPainter {
         //canvas.drawCircle(node.offset, radius, nodePaint);
       } else {
         node.painter(settings).paint(canvas, size);
-      }
-      // render all edges to other nodes
-      for (var edge in node.outEdges) {
-        edge.painter(settings).paint(canvas, size);
       }
     }
   }
