@@ -20,8 +20,7 @@ String typeToString<T>() => T.toString();
 abstract class SuperComponent extends Component implements Paintable {
   Set<Component> findSelectedComponents(PaintSettings settings, Rect r) {
     return children
-        .where((i) =>
-            i is ComponentObject && r.contains((i as ComponentObject).offset))
+        .where((i) => i is ComponentObject && r.contains(i.offset))
         .toSet();
   }
 
@@ -86,7 +85,7 @@ class SuperComponentPainter extends ComponentPainter {
   @override
   Rect size() {
     //MaxExtension.maxArg(component.children.where((element) => element is ).)
-    if (component.children.isEmpty) {
+    if (component.children.isNotEmpty) {
       return component.children
           .where((e) => e is Paintable)
           .map((e) => (e as Paintable).painter(settings).size())
@@ -197,8 +196,10 @@ abstract class ComponentPainter extends CustomPainter implements Serializable {
   const ComponentPainter(this.settings);
 
   void paintRectBorder(Canvas canvas, Size csize,
-      {double inflation = 0.0, Paint? paint}) {
-    var rect = size().inflate(inflation);
+      {double inflation = 0.0, Paint? paint, Rect? rect}) {
+    rect ??= size();
+    rect = rect.inflate(inflation);
+    // creates the used paint
     paint ??= Paint()
       ..color = Colors.black
       ..style = PaintingStyle.stroke;
@@ -531,7 +532,7 @@ mixin Weighted on Component {
       };
 }
 
-abstract class Graph extends SuperComponent {
+abstract class Graph extends SuperComponent with ComponentObject {
   List<Node> get listNodes;
 
   static final double Function(Node) compMaxX = (nd) => nd.x,
