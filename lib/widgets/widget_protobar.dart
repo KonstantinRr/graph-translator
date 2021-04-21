@@ -6,6 +6,7 @@
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:graph_translator/state_events.dart';
 import 'package:graph_translator/util.dart';
@@ -28,14 +29,24 @@ class _ProtoBarManager extends StatefulWidget {
   _ProtoBarManagerState createState() => _ProtoBarManagerState();
 }
 
+class OffsetManager extends ChangeNotifier {
+  final Map<_TSRAppBar, Pair<Offset, Size>> offsets;
+  OffsetManager(this.offsets);
+
+  void registerOffset(_TSRAppBar key, Pair<Offset, Size> value) {
+    offsets[key] = value;
+    notifyListeners();
+  }
+}
+
 class _ProtoBarManagerState extends State<_ProtoBarManager> {
   final event =
-      EventController<_TSRAppBarEvent>(_TSRAppBarEvent(_TSRAppBar.Design));
-  final offsetMap = EventController<Map<_TSRAppBar, Pair<Offset, Size>>>(const {
+      ValueNotifier<_TSRAppBarEvent>(_TSRAppBarEvent(_TSRAppBar.Design));
+  final offsetMap = OffsetManager(<_TSRAppBar, Pair<Offset, Size>>{
     _TSRAppBar.Design: Pair(Offset.zero, Size.zero),
     _TSRAppBar.Prototype: Pair(Offset.zero, Size.zero),
   });
-  final state = EventController<_ProtoBarState>(_ProtoBarState.Open);
+  final state = ValueNotifier(_ProtoBarState.Open);
 
   @override
   void dispose() {
@@ -53,18 +64,11 @@ class _ProtoBarManagerState extends State<_ProtoBarManager> {
   }
 
   void animateTo(_TSRAppBar key) {
-    event.addEvent(_TSRAppBarEvent(key));
+    event.value = _TSRAppBarEvent(key);
   }
 
   void setBarState(_ProtoBarState newState) {
-    state.addEvent(newState);
-  }
-
-  void regiserOffset(_TSRAppBar key, Pair<Offset, Size> value) {
-    var newMap = (offsetMap.lastEvent as Map<_TSRAppBar, Pair<Offset, Size>>)
-        .map((key, value) => MapEntry(key, value));
-    newMap[key] = value;
-    offsetMap.addEvent(newMap);
+    state.value = newState;
   }
 
   @override
@@ -103,6 +107,8 @@ class _SelectionAnimator extends StatefulWidget {
 
 class _SelectionAnimatorState extends State<_SelectionAnimator>
     with SingleTickerProviderStateMixin {
+  late _ProtoBarManagerState state;
+
   StreamSubscription? subscription;
   CombinedStream? combinedStream;
   late final AnimationController controller;
@@ -128,15 +134,19 @@ class _SelectionAnimatorState extends State<_SelectionAnimator>
 
     clearState();
 
-    var state = _ProtoBarManagerState.of(context) as _ProtoBarManagerState;
-    combinedStream = CombinedStream([state.offsetMap, state.event]);
-    setStopped(getFromList(combinedStream?.lastEvent));
+    state = _ProtoBarManagerState.of(context)!;
+    state.offsetMap.addListener(listen);
+    state.event.addListener(listen);
 
-    subscription = combinedStream?.stream.listen((event) {
-      setState(() {
-        var pair = getFromList(event);
-        setMoving(pair);
-      });
+    setStopped(getFromList([state.offsetMap.offsets, state.event.value]));
+
+    subscription = combinedStream?.stream.listen((event) {});
+  }
+
+  void listen() {
+    setState(() {
+      var pair = getFromList([state.offsetMap.offsets, state.event.value]);
+      setMoving(pair);
     });
   }
 
@@ -203,7 +213,7 @@ class RegisterSizeWidget extends StatelessWidget {
     var box = context.findRenderObject() as RenderBox;
     var offset = box.localToGlobal(Offset.zero, ancestor: parentBox);
 
-    state?.regiserOffset(registerKey, Pair(offset, box.size));
+    state?.offsetMap.registerOffset(registerKey, Pair(offset, box.size));
   }
 
   @override
@@ -223,29 +233,30 @@ class ProtoBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _ProtoBarManager(
-        child: Container(
-      color: Colors.white,
-      child: Material(
-        type: MaterialType.transparency,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _ProtoBarHeader(
-                    controller: controller,
+      child: Container(
+        color: Colors.white,
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _ProtoBarHeader(
+                      controller: controller,
+                    ),
                   ),
-                ),
-                _ProtoBarContentHeader(),
-                _ProtoBarStateButton(),
-              ],
-            ),
-            _ProtoBarContent(),
-          ],
+                  const _ProtoBarContentHeader(),
+                  const _ProtoBarStateButton(),
+                ],
+              ),
+              const _ProtoBarContent(),
+            ],
+          ),
         ),
       ),
-    ));
+    );
   }
 }
 
@@ -255,10 +266,10 @@ class _ProtoBarStateButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var provider = _ProtoBarManagerState.of(context) as _ProtoBarManagerState;
-    return EventStreamBuilder<_ProtoBarState>(
-      controller: provider.state,
-      builder: (context, data) {
-        switch (data) {
+    return EventValueBuilder(
+      notifier: provider.state,
+      builder: (context) {
+        switch (provider.state.value) {
           case _ProtoBarState.Open:
             return IconButton(
               icon: Icon(Icons.arrow_upward),
@@ -411,7 +422,7 @@ class _ProtoBarHeader extends StatelessWidget implements PreferredSizeWidget {
                   state.animateTo(_TSRAppBar.Design);
                 },
                 child: Text(
-                  'Design',
+                  'Time',
                   style: style,
                 ),
               ),
@@ -426,7 +437,7 @@ class _ProtoBarHeader extends StatelessWidget implements PreferredSizeWidget {
                   state.animateTo(_TSRAppBar.Prototype);
                 },
                 child: Text(
-                  'Prototype',
+                  'Models',
                   style: style,
                 ),
               ),
