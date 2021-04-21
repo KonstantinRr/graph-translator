@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:graph_translator/state/graph_directed.dart';
+import 'package:graph_translator/state/model_threshold.dart';
 import 'package:graph_translator/widgets/widget_graph.dart';
 import 'package:graph_translator/widgets/widget_protobar.dart';
 import 'package:graph_translator/widgets/window_controller.dart';
@@ -12,9 +13,10 @@ import 'package:graph_translator/widgets/window_controller.dart';
 class GraphControllerProvider extends StatefulWidget {
   final GraphController Function() creator;
   final Widget child;
-  const GraphControllerProvider({required this.creator,
-    required this.child, Key? key}) : super(key: key);
-  
+  const GraphControllerProvider(
+      {required this.creator, required this.child, Key? key})
+      : super(key: key);
+
   @override
   GraphControllerProviderState createState() => GraphControllerProviderState();
 
@@ -60,8 +62,7 @@ class RouteHomeState extends State<RouteHome> {
   @override
   void initState() {
     super.initState();
-    controller = GraphController(
-        graph: DirectedGraph.example());
+    controller = GraphController(graph: GlobalThresholdGraph(0.5)..random());
   }
 
   @override
@@ -128,29 +129,31 @@ class RouteHomeState extends State<RouteHome> {
             */
           },
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget> [
-              Expanded(child: LayoutBuilder(
-                builder: (context, constraints) => Stack(
-                  fit: StackFit.loose,
-                  children: <Widget>[
-                    Positioned.fill(
-                      child: GraphWidget(
-                        controller: controller,
-                      ),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => Stack(
+                      fit: StackFit.loose,
+                      children: <Widget>[
+                        Positioned.fill(
+                          child: GraphWidget(
+                            controller: controller,
+                          ),
+                        ),
+                        Positioned(
+                          top: 0.0,
+                          left: 0.0,
+                          right: 0.0,
+                          child: ProtoBar(
+                            controller: controller,
+                          ),
+                        ),
+                      ],
                     ),
-                    Positioned(
-                      top: 0.0, left: 0.0, right: 0.0,
-                      child: ProtoBar(
-                        controller: controller,
-                      ),
-                    ),
-                  ],
-                ),),
-              )
-            ]
-          )
-        ),
+                  ),
+                )
+              ])),
     );
   }
 }

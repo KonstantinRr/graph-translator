@@ -12,7 +12,7 @@ import 'package:graph_translator/state_events.dart';
 import 'package:graph_translator/util.dart';
 import 'package:graph_translator/widgets/widget_graph.dart';
 
-enum _TSRAppBar { Design, Prototype }
+enum _TSRAppBar { Design, Prototype, View }
 
 class _TSRAppBarEvent {
   final _TSRAppBar value;
@@ -41,7 +41,7 @@ class OffsetManager extends ChangeNotifier {
 
 class _ProtoBarManagerState extends State<_ProtoBarManager> {
   final event =
-      ValueNotifier<_TSRAppBarEvent>(_TSRAppBarEvent(_TSRAppBar.Design));
+      ValueNotifier<_TSRAppBarEvent>(_TSRAppBarEvent(_TSRAppBar.Prototype));
   final offsetMap = OffsetManager(<_TSRAppBar, Pair<Offset, Size>>{
     _TSRAppBar.Design: Pair(Offset.zero, Size.zero),
     _TSRAppBar.Prototype: Pair(Offset.zero, Size.zero),
@@ -107,10 +107,8 @@ class _SelectionAnimator extends StatefulWidget {
 
 class _SelectionAnimatorState extends State<_SelectionAnimator>
     with SingleTickerProviderStateMixin {
-  late _ProtoBarManagerState state;
+  _ProtoBarManagerState? state;
 
-  StreamSubscription? subscription;
-  CombinedStream? combinedStream;
   late final AnimationController controller;
   late Animation<double> size, offset;
 
@@ -124,8 +122,8 @@ class _SelectionAnimatorState extends State<_SelectionAnimator>
   }
 
   void clearState() {
-    subscription?.cancel();
-    combinedStream?.dispose();
+    state?.offsetMap.removeListener(listen);
+    state?.event.removeListener(listen);
   }
 
   @override
@@ -135,17 +133,15 @@ class _SelectionAnimatorState extends State<_SelectionAnimator>
     clearState();
 
     state = _ProtoBarManagerState.of(context)!;
-    state.offsetMap.addListener(listen);
-    state.event.addListener(listen);
+    state!.offsetMap.addListener(listen);
+    state!.event.addListener(listen);
 
-    setStopped(getFromList([state.offsetMap.offsets, state.event.value]));
-
-    subscription = combinedStream?.stream.listen((event) {});
+    setStopped(getFromList([state!.offsetMap.offsets, state!.event.value]));
   }
 
   void listen() {
     setState(() {
-      var pair = getFromList([state.offsetMap.offsets, state.event.value]);
+      var pair = getFromList([state!.offsetMap.offsets, state!.event.value]);
       setMoving(pair);
     });
   }
@@ -321,12 +317,12 @@ class _ProtoBarContentState extends State<_ProtoBarContent>
   void initState() {
     super.initState();
     controller = AnimationController(
-      duration: Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 500),
       vsync: this,
     );
 
     size = Tween(begin: 70.0, end: 0.0).animate(CurvedAnimation(
-      curve: Interval(
+      curve: const Interval(
         0.6,
         1.0,
         curve: Curves.easeInOut,
@@ -334,7 +330,7 @@ class _ProtoBarContentState extends State<_ProtoBarContent>
       parent: controller,
     ));
     opacity = Tween(begin: 1.0, end: 0.0).animate(CurvedAnimation(
-      curve: Interval(
+      curve: const Interval(
         0.0,
         0.4,
         curve: Curves.easeInOut,
@@ -370,7 +366,7 @@ class _ProtoBarContentState extends State<_ProtoBarContent>
     }
   }
 
-  Widget buildTools(BuildContext context) {
+  Widget buildModels(BuildContext context) {
     Widget Function(BuildContext, String, void Function()) builder =
         (context, name, onPressed) {
       return SizedBox(
@@ -403,7 +399,11 @@ class _ProtoBarContentState extends State<_ProtoBarContent>
     );
   }
 
-  Widget buildModels(BuildContext context) {
+  Widget buildTools(BuildContext context) {
+    return Container();
+  }
+
+  Widget buildView(BuildContext context) {
     return Container();
   }
 
@@ -412,16 +412,22 @@ class _ProtoBarContentState extends State<_ProtoBarContent>
     var state = _ProtoBarManagerState.of(context)!;
     return AnimatedBuilder(
       animation: size,
-      child: EventValueBuilder(
-        notifier: state.event,
-        builder: (context) {
-          switch (state.event.value.value) {
-            case _TSRAppBar.Design:
-              return buildTools(context);
-            case _TSRAppBar.Prototype:
-              return buildModels(context);
-          }
-        },
+      child: OverflowBox(
+        maxWidth: double.infinity,
+        alignment: Alignment.centerLeft,
+        child: EventValueBuilder(
+          notifier: state.event,
+          builder: (context) {
+            switch (state.event.value.value) {
+              case _TSRAppBar.Design:
+                return buildTools(context);
+              case _TSRAppBar.Prototype:
+                return buildModels(context);
+              case _TSRAppBar.View:
+                return buildView(context);
+            }
+          },
+        ),
       ),
       builder: (context, child) {
         return SizedBox(
@@ -457,87 +463,103 @@ class _ProtoBarHeader extends StatelessWidget implements PreferredSizeWidget {
         key: parentKey,
         alignment: Alignment.center,
         children: <Widget>[
-          Row(children: <Widget>[
-            IconButton(
-              icon: Icon(Icons.menu),
-              color: Colors.grey,
-              tooltip: 'Menu',
-              onPressed: () {},
-            ),
-            IconButton(
-              icon: Icon(Icons.home),
-              color: Colors.grey,
-              tooltip: 'Home',
-              onPressed: () {},
-            ),
-            EventValueBuilder<ActionController>(
-              notifier: controller.action,
-              builder: (context) {
-                return Row(
-                  children: <Widget>[
-                    IconButton(
-                      icon: Icon(Icons.arrow_back),
-                      color: controller.action.canUndo
-                          ? Colors.black
-                          : Colors.grey,
-                      tooltip: 'Undo',
-                      onPressed: !controller.action.canUndo
-                          ? null
-                          : () {
-                              if (controller.action.canUndo) {
-                                controller.action.undo();
-                              }
-                            },
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.arrow_forward),
-                      color: controller.action.canRedo
-                          ? Colors.black
-                          : Colors.grey,
-                      tooltip: 'Redo',
-                      onPressed: !controller.action.canRedo
-                          ? null
-                          : () {
-                              if (controller.action.canRedo) {
-                                controller.action.redo();
-                              }
-                            },
-                    ),
-                  ],
-                );
-              },
-            ),
-            RegisterSizeWidget(
-              registerKey: _TSRAppBar.Design,
-              parent: parentKey,
-              child: TextButton(
-                onPressed: () {
-                  var state = _ProtoBarManagerState.of(context)
-                      as _ProtoBarManagerState;
-                  state.animateTo(_TSRAppBar.Design);
+          OverflowBox(
+            maxWidth: double.infinity,
+            alignment: Alignment.centerLeft,
+            child: Row(children: <Widget>[
+              IconButton(
+                icon: Icon(Icons.menu),
+                color: Colors.grey,
+                tooltip: 'Menu',
+                onPressed: () {},
+              ),
+              IconButton(
+                icon: Icon(Icons.home),
+                color: Colors.grey,
+                tooltip: 'Home',
+                onPressed: () {},
+              ),
+              EventValueBuilder<ActionController>(
+                notifier: controller.action,
+                builder: (context) {
+                  return Row(
+                    children: <Widget>[
+                      IconButton(
+                        icon: Icon(Icons.arrow_back),
+                        color: controller.action.canUndo
+                            ? Colors.black
+                            : Colors.grey,
+                        tooltip: 'Undo',
+                        onPressed: !controller.action.canUndo
+                            ? null
+                            : () {
+                                if (controller.action.canUndo) {
+                                  controller.action.undo();
+                                }
+                              },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.arrow_forward),
+                        color: controller.action.canRedo
+                            ? Colors.black
+                            : Colors.grey,
+                        tooltip: 'Redo',
+                        onPressed: !controller.action.canRedo
+                            ? null
+                            : () {
+                                if (controller.action.canRedo) {
+                                  controller.action.redo();
+                                }
+                              },
+                      ),
+                    ],
+                  );
                 },
-                child: Text(
-                  'Time',
-                  style: style,
+              ),
+              RegisterSizeWidget(
+                registerKey: _TSRAppBar.Design,
+                parent: parentKey,
+                child: TextButton(
+                  onPressed: () {
+                    var state = _ProtoBarManagerState.of(context)!;
+                    state.animateTo(_TSRAppBar.Design);
+                  },
+                  child: Text(
+                    'Time',
+                    style: style,
+                  ),
                 ),
               ),
-            ),
-            RegisterSizeWidget(
-              registerKey: _TSRAppBar.Prototype,
-              parent: parentKey,
-              child: TextButton(
-                onPressed: () {
-                  var state = _ProtoBarManagerState.of(context)
-                      as _ProtoBarManagerState;
-                  state.animateTo(_TSRAppBar.Prototype);
-                },
-                child: Text(
-                  'Models',
-                  style: style,
+              RegisterSizeWidget(
+                registerKey: _TSRAppBar.Prototype,
+                parent: parentKey,
+                child: TextButton(
+                  onPressed: () {
+                    var state = _ProtoBarManagerState.of(context)!;
+                    state.animateTo(_TSRAppBar.Prototype);
+                  },
+                  child: Text(
+                    'Models',
+                    style: style,
+                  ),
                 ),
               ),
-            ),
-          ]),
+              RegisterSizeWidget(
+                registerKey: _TSRAppBar.View,
+                parent: parentKey,
+                child: TextButton(
+                  onPressed: () {
+                    var state = _ProtoBarManagerState.of(context)!;
+                    state.animateTo(_TSRAppBar.View);
+                  },
+                  child: Text(
+                    'View',
+                    style: style,
+                  ),
+                ),
+              ),
+            ]),
+          ),
           Positioned(
             bottom: 0.0,
             height: 2.0,

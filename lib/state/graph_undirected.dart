@@ -3,6 +3,8 @@
 /// The project was build by:
 /// Konstantin Rolf (S3750558) - k.rolf@student.rug.nl
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'package:fraction/fraction.dart';
@@ -35,7 +37,11 @@ class UndirectedNode extends Node {
   }
 
   @override
-  void read(Map<String, dynamic> map) {}
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
+
   Map<String, dynamic> toJson() => {
         'type': typeToString<UndirectedNode>(),
         'parent': super.toJson(),
@@ -51,6 +57,18 @@ class UndirectedEdgePainter extends EdgePainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+
+  @override
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<UndirectedEdgePainter>(),
+        'parent': super.toJson(),
+      };
 }
 
 abstract class UndirectedEdge extends Component
@@ -59,6 +77,18 @@ abstract class UndirectedEdge extends Component
   @override
   UndirectedEdgePainter painter(PaintSettings settings) =>
       UndirectedEdgePainter(settings, this);
+
+  @override
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<UndirectedEdge>(),
+        'parent': super.toJson(),
+      };
 }
 
 class UndirectedUnweightedEdge extends UndirectedEdge {
@@ -67,7 +97,10 @@ class UndirectedUnweightedEdge extends UndirectedEdge {
   }
 
   @override
-  void read(Map<String, dynamic> map) {}
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
 
   @override
   Map<String, dynamic> toJson() => {
@@ -84,7 +117,10 @@ class UndirectedWeightedEdge extends UndirectedEdge with Weighted {
   }
 
   @override
-  void read(Map<String, dynamic> map) {}
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
 
   @override
   Map<String, dynamic> toJson() => {
@@ -95,7 +131,7 @@ class UndirectedWeightedEdge extends UndirectedEdge with Weighted {
 }
 
 class GraphUndirected extends Graph {
-  final List<UndirectedNode> nodes;
+  List<UndirectedNode> nodes;
 
   GraphUndirected([List<UndirectedNode>? nodes]) : nodes = nodes ?? [];
 
@@ -113,6 +149,28 @@ class GraphUndirected extends Graph {
         });
         component.edges.clear();
       }
+    }
+  }
+
+  /// Creates a randomized graph with the given node and connection count.
+  /// The default [nodeCount] is 10, the default [connectionCount] is 20
+  void random({int? nodeCount, int? connectionCount}) {
+    // The random object that is used in this function
+    final rand = math.Random();
+    // sets the default nodeCount and connectionCount
+    nodeCount ??= 10;
+    connectionCount ??= 20;
+
+    nodes = [];
+    for (var i = 0; i < nodeCount; i++) {
+      nodes.add(createNode()..randPosition());
+    }
+
+    for (var i = 0; i < connectionCount; i++) {
+      var start = nodes[rand.nextInt(nodes.length)];
+      var end = nodes[rand.nextInt(nodes.length)];
+      var edge = createEdge(start, end);
+      addEdge(edge);
     }
   }
 
@@ -144,12 +202,61 @@ class GraphUndirected extends Graph {
   Iterable<Component> get children => nodes;
 
   @override
-  void read(Map<String, dynamic> map) {}
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
 
   @override
   Map<String, dynamic> toJson() => {
         'type': typeToString<GraphUndirected>(),
         'parent': super.toJson(),
-        'nodes': nodes.map((e) => e.toJson()).toList(),
+      };
+
+  @override
+  UndirectedGraphPainter painter(PaintSettings settings) =>
+      UndirectedGraphPainter(settings, this);
+}
+
+class UndirectedGraphPainter extends SuperComponentPainter {
+  final bool skipInvisible;
+  UndirectedGraphPainter(PaintSettings settings, GraphUndirected graph,
+      {this.skipInvisible = false})
+      : super(settings, graph);
+
+  GraphUndirected get undirected => component as GraphUndirected;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    var render = <UndirectedEdge>{};
+
+    // perform rendering
+    for (var node in undirected.nodes) {
+      render.addAll(node.edges);
+    }
+
+    // render all edges to other nodes
+    for (var edge in render) {
+      edge.painter(settings).paint(canvas, size);
+    }
+    for (var node in undirected.nodes) {
+      node.painter(settings).paint(canvas, size);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+
+  @override
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<UndirectedGraphPainter>(),
+        'parent': super.toJson(),
+        'skipInvisible': skipInvisible,
       };
 }

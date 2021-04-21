@@ -10,7 +10,6 @@ import 'dart:math' as math;
 
 import 'package:graph_translator/state/graph.dart';
 import 'package:flutter/material.dart';
-import 'package:graph_translator/util.dart';
 import 'package:vector_math/vector_math.dart' as vec;
 
 class DirectedNode extends Node {
@@ -58,10 +57,17 @@ class DirectedNode extends Node {
   }
 
   @override
-  void read(Map<String, dynamic> map) {}
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
 
   @override
-  Map<String, dynamic> toJson() => {'type': typeToString<DirectedNode>()};
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<DirectedNode>(),
+        'parent': super.toJson(),
+        'outEdges': outEdges.map((e) => e.toJson()).toList()
+      };
 }
 
 class DirectedEdgePainter extends EdgePainter {
@@ -125,6 +131,20 @@ class DirectedEdgePainter extends EdgePainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+
+  @override
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<DirectedEdgePainter>(),
+        'parent': super.toJson(),
+        'arrowWidth': arrowWidth,
+        'arrowHeight': arrowLength,
+      };
 }
 
 /// The general interface of a directed edge
@@ -134,6 +154,18 @@ abstract class DirectedEdge extends Component
   @override
   DirectedEdgePainter painter(PaintSettings settings) =>
       DirectedEdgePainter(settings, this);
+
+  @override
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<DirectedEdge>(),
+        'parent': super.toJson(),
+      };
 }
 
 /// A weigthed implementation of [DirectedEdge]
@@ -145,10 +177,16 @@ class DirectedWeightedEdge extends DirectedEdge with Weighted {
   }
 
   @override
-  void read(Map<String, dynamic> map) {}
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
 
   @override
-  Map<String, dynamic> toJson() => {};
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<DirectedWeightedEdge>(),
+        'parent': super.toJson(),
+      };
 }
 
 /// An unweighted implementation of [DirectedEdge]
@@ -158,14 +196,16 @@ class DirectedUnweightedEdge extends DirectedEdge {
   }
 
   @override
-  void read(Map<String, dynamic> map) {}
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
 
   @override
-  Map<String, dynamic> toJson() => {};
-}
-
-abstract class NodeList<T> {
-  List<T> get nodes;
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<DirectedUnweightedEdge>(),
+        'parent': super.toJson(),
+      };
 }
 
 class DirectedGraph extends Graph implements Paintable {
@@ -179,7 +219,7 @@ class DirectedGraph extends Graph implements Paintable {
   }
 
   DirectedNode createNode() => DirectedNode();
-  DirectedEdge createdEdge(DirectedNode n1, DirectedNode n2) =>
+  DirectedEdge createEdge(DirectedNode n1, DirectedNode n2) =>
       DirectedWeightedEdge(n1, n2);
 
   @override
@@ -221,7 +261,7 @@ class DirectedGraph extends Graph implements Paintable {
     for (var i = 0; i < connectionCount; i++) {
       var start = nodes[rand.nextInt(nodes.length)];
       var end = nodes[rand.nextInt(nodes.length)];
-      var edge = createdEdge(start, end);
+      var edge = createEdge(start, end);
       addEdge(edge);
     }
   }
@@ -256,10 +296,16 @@ class DirectedGraph extends Graph implements Paintable {
   Iterable<Component> get children => nodes;
 
   @override
-  void read(Map<String, dynamic> map) {}
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
 
   @override
-  Map<String, dynamic> toJson() => {};
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<DirectedGraph>(),
+        'parent': super.toJson(),
+      };
 
   @override
   DirectedGraphPainter painter(PaintSettings settings) =>
@@ -284,21 +330,22 @@ class DirectedGraphPainter extends SuperComponentPainter {
       }
     }
     for (var node in directed.nodes) {
-      if (skipInvisible) {
-        //Rect renderRect = Rect.fromPoints(
-        //  pointScale(Offset.zero), pointScale(Offset(size.width, size.height)));
-        //var rect = Rect.fromCircle(center: node.offset, radius: radius);
-        //if (rect.overlaps(renderRect)) {
-        //  canvas.drawCircle(node.offset, radius, nodePaint);
-        //  //count++;
-        //}
-        //canvas.drawCircle(node.offset, radius, nodePaint);
-      } else {
-        node.painter(settings).paint(canvas, size);
-      }
+      node.painter(settings).paint(canvas, size);
     }
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+
+  @override
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<DirectedGraphPainter>(),
+        'parent': super.toJson(),
+      };
 }

@@ -44,6 +44,18 @@ abstract class SuperComponent extends Component implements Paintable {
 
   int get length => children.length;
   Iterable<Component> get children => [];
+
+  @override
+  void read(Map<String, dynamic> data) {
+    super.toJson();
+    // TODO
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<SuperComponent>(),
+        'parent': super.toJson(),
+      };
 }
 
 class SuperComponentPainter extends ComponentPainter {
@@ -90,9 +102,17 @@ class SuperComponentPainter extends ComponentPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<SuperComponentPainter>(),
+        'component': component.toJson(),
+        'parent': super.toJson(),
+      };
 }
 
-abstract class Component extends ListenerHandler<Component> {
+abstract class Component extends ListenerHandler<Component>
+    implements Serializable {
   final UniqueKey key = UniqueKey();
   Component? parent;
 
@@ -101,17 +121,36 @@ abstract class Component extends ListenerHandler<Component> {
     parent?.notify(src ?? this);
   }
 
-  void read(Map<String, dynamic> map);
-  Map<String, dynamic> toJson() => {'type': 'Component'};
+  @override
+  void read(Map<String, dynamic> data) {
+    // TODO
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<Component>(),
+      };
 }
 
-class ComponentConnector {
+class ComponentConnector implements Serializable {
   ComponentObject? p1, p2;
 
   void setComponents(ComponentObject p1, ComponentObject p2) {
     this.p1 = p1;
     this.p2 = p2;
   }
+
+  @override
+  void read(Map<String, dynamic> data) {
+    // TODO
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<ComponentConnector>(),
+        'p1': p1?.toJson(),
+        'p2': p2?.toJson(),
+      };
 }
 
 mixin UndirectedComponentConnector on ComponentConnector {
@@ -120,6 +159,17 @@ mixin UndirectedComponentConnector on ComponentConnector {
       ((p1 == o.p1 && p2 == o.p2) || (p1 == o.p2 && p2 == o.p1));
   int get hashCode =>
       hash2(p1.hashCode, p2.hashCode) ^ hash2(p2.hashCode, p1.hashCode);
+
+  @override
+  void read(Map<String, dynamic> toJson) {
+    super.toJson();
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<UndirectedComponentConnector>(),
+        'parent': super.toJson(),
+      };
 }
 
 mixin DirectedComponentConnector on ComponentConnector {
@@ -129,41 +179,117 @@ mixin DirectedComponentConnector on ComponentConnector {
   bool operator ==(o) =>
       o is DirectedComponentConnector && ((p1 == o.p1 && p2 == o.p2));
   int get hashCode => hash2(p1.hashCode, p2.hashCode);
+
+  @override
+  void read(Map<String, dynamic> toJson) {
+    super.toJson();
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<UndirectedComponentConnector>(),
+        'parent': super.toJson(),
+      };
 }
 
-abstract class ComponentPainter extends CustomPainter {
+abstract class ComponentPainter extends CustomPainter implements Serializable {
   final PaintSettings settings;
   const ComponentPainter(this.settings);
 
+  void paintRectBorder(Canvas canvas, Size csize,
+      {double inflation = 0.0, Paint? paint}) {
+    var rect = size().inflate(inflation);
+    paint ??= Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawRect(rect, paint);
+  }
+
   Rect size();
+
+  @override
+  void read(Map<String, dynamic> data) {
+    // TODO
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<ComponentPainter>(),
+        'paintSettings': settings.toJson(),
+      };
 }
 
-class PaintSettings {
+class PaintSettings implements Serializable {
   final SelectionNotifier selection;
-  final Map<String, dynamic> vars = {};
+  final Map<String, dynamic> _vars = {};
+  final List<List<Pair<String, dynamic>>> _changes = [[]];
   PaintSettings(this.selection);
 
+  void setVar(String key, dynamic variable) {
+    _vars[key] = variable;
+  }
+
   void addVar(String key, dynamic variable) {
-    vars[key] = variable;
+    _changes.last.add(Pair(key, _vars[key]));
+    _vars[key] = variable;
+  }
+
+  void addVarSave(String key, dynamic variable) {
+    save();
+    addVar(key, variable);
+  }
+
+  bool get canRestore => _changes.isNotEmpty;
+
+  void save() {
+    _changes.add([]);
+  }
+
+  void restore() {
+    assert(canRestore, 'Cannot restore, Stack is empty!');
+    for (var i in _changes.last.reversed) {
+      _vars[i.t1] = i.t1;
+    }
+    _changes.removeLast();
   }
 
   T? getVar<T>(String key) {
-    var value = vars[key];
+    var value = _vars[key];
     return value is T ? value : null;
   }
 
   T getVarAlternative<T>(String key, T alternative) {
-    var value = vars[key];
+    var value = _vars[key];
     return value is T ? value : alternative;
   }
+
+  @override
+  void read(Map<String, dynamic> data) {
+    // TODO
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<PaintSettings>(),
+        // TODO
+      };
 }
 
-abstract class Paintable {
+abstract class Paintable implements Serializable {
   const Paintable();
   ComponentPainter painter(PaintSettings settings);
+
+  @override
+  void read(Map<String, dynamic> data) {}
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<Paintable>(),
+      };
 }
 
-mixin ComponentObject {
+mixin ComponentObject on Component {
   /// Stores the coordinates
   double x = 0.0, y = 0.0;
 
@@ -187,6 +313,20 @@ mixin ComponentObject {
   Offset get offset => Offset(x, y);
   Size get size => Size(x, y);
   vec.Vector2 get vector => vec.Vector2(x, y);
+
+  @override
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<ComponentObject>(),
+        'parent': super.toJson(),
+        'x': x,
+        'y': y,
+      };
 }
 
 abstract class Node extends Component
@@ -194,49 +334,77 @@ abstract class Node extends Component
     implements Paintable {
   @override
   NodePainter painter(PaintSettings settings) => NodePainter(settings, this);
+
+  @override
+  void read(Map<String, dynamic> data) {
+    super.toJson();
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<Node>(),
+        'parent': super.toJson(),
+      };
 }
 
 class NodePainter extends ComponentPainter {
   final Node nd;
   final double? _radius;
-  const NodePainter(PaintSettings settings, this.nd, {double? radius})
+  final Color? _color;
+  const NodePainter(PaintSettings settings, this.nd,
+      {double? radius, Color? color})
       : _radius = radius,
+        _color = color,
         super(settings);
+
+  Color get color {
+    if (_color != null) return _color!;
+    return settings.getVarAlternative<Color>('nodeColor', Colors.black);
+  }
+
+  Color get selectionColor {
+    return settings.getVarAlternative<Color>(
+        'nodeSelectionColor', Colors.lightBlue);
+  }
 
   double get radius {
     if (_radius != null) return _radius!;
-    var settingsVar = settings.getVar<double>('nodeRadius');
-    if (settingsVar != null) return settingsVar;
-    return 5.0;
+    return settings.getVarAlternative<double>('nodeRadius', 5.0);
   }
 
   Rect size() => Rect.fromCircle(center: nd.offset, radius: radius);
 
   @override
   void paint(Canvas canvas, Size csize) {
-    /*
-    if (settings.selection.isSelected(nd)) {
-      var selectionPaint = Paint()
-        ..style = PaintingStyle.fill
-        ..color = Colors.blue.withOpacity(0.4);
-      var rect = size();
-      canvas.drawRect(rect, selectionPaint);
-    }
-    */
-
     var nodePaint = Paint()
       ..style = PaintingStyle.fill
-      ..color = Colors.black;
+      ..color = color;
     if (settings.selection.isSelected(nd)) {
-      nodePaint.color = Colors.lightBlue;
+      nodePaint.color = selectionColor;
     }
     canvas.drawCircle(nd.offset, radius, nodePaint);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+
+  @override
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<NodePainter>(),
+        'parent': super.toJson(),
+        'nd': nd.toJson(),
+        'radius': radius,
+        'color': color,
+      };
 }
 
+/*
 class MaxExtension {
   static Pair<int, T?> maxTuple<T extends Comparable<T>>(Iterable<T> iter) {
     if (iter.isEmpty) return Pair(-1, null);
@@ -259,7 +427,7 @@ class MaxExtension {
       maxTuple(iter).t1;
   static T? max<T extends Comparable<T>>(Iterable<T> iter) => maxTuple(iter).t2;
 }
-
+*/
 abstract class EdgePainter extends ComponentPainter {
   final ComponentConnector connector;
   const EdgePainter(PaintSettings settings, this.connector) : super(settings);
@@ -327,14 +495,40 @@ abstract class EdgePainter extends ComponentPainter {
             : connector.p1!.offset & Size(20.0, 20.0))
         : Rect.zero;
   }
+
+  @override
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<EdgePainter>(),
+        'parent': super.toJson(),
+        'connector': connector.toJson(),
+      };
 }
 
-mixin Weighted {
+mixin Weighted on Component {
   Fraction weight = Fraction(1);
 
   void setWeightIf(Fraction? newWeight) {
     if (newWeight != null) weight = newWeight;
   }
+
+  @override
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<Weighted>(),
+        'parent': super.toJson(),
+        'weight': weight,
+      };
 }
 
 abstract class Graph extends SuperComponent {
@@ -348,4 +542,16 @@ abstract class Graph extends SuperComponent {
       compMinAbsX = (nd) => -nd.x.abs(),
       compMaxAbsY = (nd) => nd.y.abs(),
       compMinAbsY = (nd) => -nd.y.abs();
+
+  @override
+  void read(Map<String, dynamic> data) {
+    super.read(data);
+    // TODO
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': typeToString<Graph>(),
+        'parent': super.toJson(),
+      };
 }
