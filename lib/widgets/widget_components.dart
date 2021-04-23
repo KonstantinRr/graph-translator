@@ -16,18 +16,27 @@ class TreePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
-class WidgetSingleComponent extends StatefulWidget {
-  final Component component;
+class WidgetSingleComponent<T, Q> extends StatefulWidget {
+  final T component;
+  final List<T> Function(T) splitter;
+  final Widget Function(BuildContext, T) builder;
+
   final int initialLength;
   const WidgetSingleComponent(
-      {required this.component, this.initialLength = 16, Key? key})
+      {required this.component,
+      this.initialLength = 16,
+      required this.splitter,
+      required this.builder,
+      Key? key})
       : super(key: key);
 
   @override
-  WidgetSingleComponentState createState() => WidgetSingleComponentState();
+  WidgetSingleComponentState<T, Q> createState() =>
+      WidgetSingleComponentState<T, Q>();
 }
 
-class WidgetSingleComponentState extends State<WidgetSingleComponent> {
+class WidgetSingleComponentState<T, Q>
+    extends State<WidgetSingleComponent<T, Q>> {
   late WidgetComponentsState state;
   late int currentMaxLength;
 
@@ -41,19 +50,6 @@ class WidgetSingleComponentState extends State<WidgetSingleComponent> {
     currentMaxLength = widget.initialLength;
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    state = WidgetComponentsState.of(context) as WidgetComponentsState;
-    state.map[widget.component] = () => setState(() {});
-  }
-
-  @override
-  void dispose() {
-    state.map.remove(widget.component);
-    super.dispose();
-  }
-
   void onMore() {
     setState(() => currentMaxLength =
         math.max(currentMaxLength - decreaseSize, elementsMinLength));
@@ -64,82 +60,98 @@ class WidgetSingleComponentState extends State<WidgetSingleComponent> {
         math.min(currentMaxLength + addSize, elementsMaxLength));
   }
 
-  Component get component => widget.component;
-
-  Widget buildList(BuildContext context, Widget child) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        child,
-        Padding(
-            padding: EdgeInsets.only(left: 10.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: (component as SuperComponent)
-                  .children
-                  .take(currentMaxLength)
-                  .map((comp) => WidgetSingleComponent(
-                        component: comp,
-                      ))
-                  .toList(),
-            )),
-        Padding(
-          padding: EdgeInsets.only(left: 10),
-          child: Row(
-            children: [
-              Card(
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: InkWell(
-                    onTap: onLess,
-                    borderRadius: BorderRadius.circular(4),
-                    child: Container(
-                      width: 25.0,
-                      height: 25.0,
-                      alignment: Alignment.center,
-                      child: Text('+'),
-                    ),
-                  ),
+  Widget buildButtons(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(left: 10),
+      child: Row(
+        children: [
+          Card(
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: onLess,
+                borderRadius: BorderRadius.circular(4),
+                child: Container(
+                  width: 25.0,
+                  height: 25.0,
+                  alignment: Alignment.center,
+                  child: Text('+'),
                 ),
               ),
-              SizedBox(
-                width: 10.0,
-              ),
-              Card(
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(4),
-                    onTap: onMore,
-                    child: Container(
-                      width: 25.0,
-                      height: 25.0,
-                      alignment: Alignment.center,
-                      child: Text('-'),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ],
+          SizedBox(
+            width: 10.0,
+          ),
+          Card(
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(4),
+                onTap: onMore,
+                child: Container(
+                  width: 25.0,
+                  height: 25.0,
+                  alignment: Alignment.center,
+                  child: Text('-'),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    Widget object = Text(component.runtimeType.toString());
+    List<T> subComponents = widget.splitter(widget.component);
 
-    return Container(
-      child: Padding(
-        padding: const EdgeInsets.only(left: 10.0),
-        child:
-            component is SuperComponent ? buildList(context, object) : object,
-      ),
-    );
+    if (subComponents.isEmpty) {
+      return widget.builder(context, widget.component);
+    } else {
+      return Column(
+        children: [
+          widget.builder(context, widget.component),
+          Padding(
+            padding: const EdgeInsets.only(left: 10.0),
+            child: subComponents.length == 1
+                ? widget.builder(context, subComponents.first)
+                : Column(
+                    children: [
+                      ...subComponents.map((e) => widget.builder(context, e)),
+                      buildButtons(context),
+                    ],
+                  ),
+          )
+        ],
+      );
+    }
   }
 }
+
+/*
+class WidgetComponentDetail extends StatelessWidget {
+  final Component component;
+  const WidgetComponentDetail({required this.component, Key? key}) : super(key: key);
+
+  Widget recursiveBuilder(BuildContext context, Map<String, dynamic> data) {
+    return WidgetSingleComponent<Map<String, dynamic>>(
+      component: data,
+      splitter: (data) => data.entries.toList(),
+      builder: (context, object) {
+
+      },
+    )
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var data = component.toJson();
+
+  }
+}
+*/
 
 class WidgetComponents extends StatefulWidget {
   final Component component;
@@ -181,7 +193,15 @@ class WidgetComponentsState extends State<WidgetComponents> {
 
   @override
   Widget build(BuildContext context) {
-    return WidgetSingleComponent(
+    return WidgetSingleComponent<Component, Component>(
+      splitter: (component) =>
+          component is SuperComponent ? component.children.toList() : [],
+      builder: (context, data) {
+        return Text(
+          data.runtimeType.toString(),
+          style: TextStyle(fontSize: 18),
+        );
+      },
       component: component,
     );
   }

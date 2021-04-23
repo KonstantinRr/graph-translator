@@ -6,14 +6,15 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:graph_translator/state/graph.dart';
 import 'package:graph_translator/state_events.dart';
-import 'package:graph_translator/state_manager.dart';
+import 'package:graph_translator/widgets/widget_components.dart';
+import 'package:graph_translator/widgets/widget_graph.dart';
 
 enum _WidgetInfoState { Open, Close }
 
 class WidgetInfo extends StatefulWidget {
-  const WidgetInfo({Key? key}) : super(key: key);
+  final GraphController controller;
+  const WidgetInfo({required this.controller, Key? key}) : super(key: key);
 
   @override
   WidgetInfoState createState() => WidgetInfoState();
@@ -22,25 +23,26 @@ class WidgetInfo extends StatefulWidget {
 class WidgetInfoState extends State<WidgetInfo> {
   final val = ValueNotifier(_WidgetInfoState.Open);
 
+  GraphController get controller => widget.controller;
+
   static WidgetInfoState of(BuildContext context) =>
       context.findAncestorStateOfType<WidgetInfoState>()!;
 
   @override
   Widget build(BuildContext context) {
-    var state = StateManagerProvider.of(context) as StateManagerProvider;
     return Container(
-      width: 200.0,
-      height: 500.0,
+      color: Colors.white,
       child: Scrollbar(
-        child: SingleChildScrollView(
-          child: EventStreamBuilder<Component>(
-            controller: state.state.selected,
-            builder: (context, comp) {
-              return Text('$comp');
-            },
-          ),
-        ),
-      ),
+          child: EventValueBuilder(
+        notifier: controller.selection,
+        builder: (context) {
+          return ListView(
+            children: controller.selection.selected
+                .map((e) => WidgetComponents(component: e))
+                .toList(),
+          );
+        },
+      )),
     );
   }
 }

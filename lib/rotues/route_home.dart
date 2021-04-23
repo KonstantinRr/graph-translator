@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:graph_translator/state/graph_directed.dart';
 import 'package:graph_translator/state/model_threshold.dart';
 import 'package:graph_translator/widgets/widget_graph.dart';
+import 'package:graph_translator/widgets/widget_info.dart';
 import 'package:graph_translator/widgets/widget_protobar.dart';
 import 'package:graph_translator/widgets/window_controller.dart';
 
@@ -76,9 +77,9 @@ class RouteHomeState extends State<RouteHome> {
     return Scaffold(
       extendBody: true,
       body: WindowController(
-          key: key,
-          initialStates: {
-            /*
+        key: key,
+        initialStates: {
+          /*
             'time': WindowState(
               builder: (context) =>
                   WidgetTimeController(controller: controller),
@@ -127,33 +128,39 @@ class RouteHomeState extends State<RouteHome> {
               scale: Size(0.3, 1.0),
             )
             */
-          },
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) => Stack(
-                      fit: StackFit.loose,
-                      children: <Widget>[
-                        Positioned.fill(
-                          child: GraphWidget(
-                            controller: controller,
-                          ),
-                        ),
-                        Positioned(
-                          top: 0.0,
-                          left: 0.0,
-                          right: 0.0,
-                          child: ProtoBar(
-                            controller: controller,
-                          ),
-                        ),
-                      ],
+        },
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            Positioned.fill(
+              child: GraphWidget(
+                controller: controller,
+              ),
+            ),
+            Positioned.fill(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ProtoBar(
+                      controller: controller,
                     ),
                   ),
-                )
-              ])),
+                  Expanded(
+                    child: Container(
+                      width: 350.0,
+                      child: WidgetInfo(
+                        controller: controller,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
