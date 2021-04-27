@@ -7,6 +7,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:graph_translator/state/graph.dart';
+import 'package:graph_translator/util.dart';
 
 class TreePainter extends CustomPainter {
   @override
@@ -16,7 +17,7 @@ class TreePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
-class WidgetSingleComponent<T, Q> extends StatefulWidget {
+class WidgetSingleComponent<T> extends StatefulWidget {
   final T component;
   final List<T> Function(T) splitter;
   final Widget Function(BuildContext, T) builder;
@@ -31,12 +32,11 @@ class WidgetSingleComponent<T, Q> extends StatefulWidget {
       : super(key: key);
 
   @override
-  WidgetSingleComponentState<T, Q> createState() =>
-      WidgetSingleComponentState<T, Q>();
+  WidgetSingleComponentState<T> createState() =>
+      WidgetSingleComponentState<T>();
 }
 
-class WidgetSingleComponentState<T, Q>
-    extends State<WidgetSingleComponent<T, Q>> {
+class WidgetSingleComponentState<T> extends State<WidgetSingleComponent<T>> {
   late WidgetComponentsState state;
   late int currentMaxLength;
 
@@ -130,28 +130,52 @@ class WidgetSingleComponentState<T, Q>
   }
 }
 
-/*
 class WidgetComponentDetail extends StatelessWidget {
   final Component component;
-  const WidgetComponentDetail({required this.component, Key? key}) : super(key: key);
+  final bool sort;
+  const WidgetComponentDetail(
+      {required this.component, this.sort = true, Key? key})
+      : super(key: key);
 
-  Widget recursiveBuilder(BuildContext context, Map<String, dynamic> data) {
-    return WidgetSingleComponent<Map<String, dynamic>>(
+  Widget recursiveBuilder(
+      BuildContext context, MapEntry<String, dynamic> data) {
+    return WidgetSingleComponent<MapEntry<String, dynamic>>(
       component: data,
-      splitter: (data) => data.entries.toList(),
-      builder: (context, object) {
-
+      splitter: (data) {
+        if (data.value is Map<String, dynamic>) {
+          return (data.value as Map<String, dynamic>).entries.toList()
+            ..sort((v1, v2) => v1.key.compareTo(v2.key));
+        }
+        if (data.value is List) {
+          return enumerate(data.value as List)
+              .map((e) => MapEntry<String, dynamic>('${e.t1}', e.t2))
+              .toList();
+        }
+        return [];
       },
-    )
+      builder: (context, data) {
+        if (data.value is num) {
+          return Text('${data.value}');
+        }
+        if (data.value is Map<String, dynamic>) {
+          print(data.value);
+          return Text('${data.value}');
+          //return recursiveBuilder(context, data);
+        }
+        return Text('No Renderer for type ${data.value.runtimeType}');
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     var data = component.toJson();
-
+    print(data);
+    var firstEntry = MapEntry<String, dynamic>('panel', data);
+    return Container();
+    //return recursiveBuilder(context, firstEntry);
   }
 }
-*/
 
 class WidgetComponents extends StatefulWidget {
   final Component component;
@@ -193,7 +217,7 @@ class WidgetComponentsState extends State<WidgetComponents> {
 
   @override
   Widget build(BuildContext context) {
-    return WidgetSingleComponent<Component, Component>(
+    return WidgetSingleComponent<Component>(
       splitter: (component) =>
           component is SuperComponent ? component.children.toList() : [],
       builder: (context, data) {

@@ -17,6 +17,14 @@ class Pair<T1, T2> {
   const Pair(this.t1, this.t2);
 }
 
+Iterable<Pair<int, T>> enumerate<T>(Iterable<T> t) sync* {
+  int idx = 0;
+  for (var i in t) {
+    yield Pair<int, T>(idx, i);
+    idx++;
+  }
+}
+
 extension VectorToOffsetSize on vec.Vector2 {
   Offset toOffset() => Offset(x, y);
   Size toSize() => Size(x, y);

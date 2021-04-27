@@ -38,7 +38,7 @@ class WidgetInfoState extends State<WidgetInfo> {
         builder: (context) {
           return ListView(
             children: controller.selection.selected
-                .map((e) => WidgetComponents(component: e))
+                .map((e) => WidgetComponentDetail(component: e))
                 .toList(),
           );
         },
