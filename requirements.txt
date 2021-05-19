@@ -1,0 +1,8 @@
+scipy
+flask
+dash
+pandas
+numpy
+dash-html-components
+dash-core-components
+dash-bootstrap-components
