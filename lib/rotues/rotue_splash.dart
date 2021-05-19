@@ -47,7 +47,9 @@ class RouteSplashState extends State<RouteSplash> {
                   Padding(
                     padding: const EdgeInsets.all(20.0),
                     child: const WidgetLogo(
-                        size: 240, margin: const EdgeInsets.all(10.0)),
+                      size: 240,
+                      margin: const EdgeInsets.all(10.0),
+                    ),
                   ),
                 ],
               ),

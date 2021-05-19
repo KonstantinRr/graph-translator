@@ -4,19 +4,20 @@
 /// Konstantin Rolf (S3750558) - k.rolf@student.rug.nl
 
 import 'package:flutter/material.dart';
+
 import 'package:graph_translator/rotues/rotue_splash.dart';
 import 'package:graph_translator/rotues/route_editor.dart';
 import 'package:graph_translator/rotues/route_home.dart';
 import 'package:graph_translator/rotues/route_unknown.dart';
+
 import 'package:graph_translator/state/graph.dart';
 import 'package:graph_translator/state/graph_undirected.dart';
 import 'package:graph_translator/state_manager.dart';
-import 'package:graph_translator/util/linalg.dart';
+
 import 'package:graph_translator/util/transtion.dart';
 
 void main() {
   print(typeToString<UndirectedNode>());
-  testMatrix();
   runApp(const GraphTranslator());
 }
 
