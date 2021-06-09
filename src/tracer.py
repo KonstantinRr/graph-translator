@@ -1,4 +1,18 @@
+#!/usr/bin/env python3
+
+""" Tracers """
+
 import plotly.graph_objects as go
+
+__author__ = "Created by Konstantin Rolf | University of Groningen"
+__copyright__ = "Copyright 2021, Konstantin Rolf"
+__credits__ = [""]
+__license__ = "GPL"
+__version__ = "0.1"
+__maintainer__ = "Konstantin Rolf"
+__email__ = "konstantin.rolf@gmail.com"
+__status__ = "Development"
+
 
 # colorscale options
 #'Greys' | 'YlGnBu' | 'Greens' | 'YlOrRd' | 'Bluered' | 'RdBu' |
@@ -79,3 +93,6 @@ def generateSISTracer(graph, node_x, node_y):
 
 def generateSIRTracer(graph, node_x, node_y):
     return _generateThresholdTrace(graph, node_x, node_y, 'sir', 'SIR', 'Bluered')
+
+if __name__ == '__main__':
+    print('tracer.py')
