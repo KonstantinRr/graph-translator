@@ -32,13 +32,55 @@ class ContinuesState:
         return [random.random() * (self.end - self.start) + self.start
             for _ in range(count)]
 
+def updateLayout(graph, layoutAlgorithm, layouts, default=None):
+    """ Updates the layout of the graph """
+    if layoutAlgorithm in layouts:
+        return layouts[layoutAlgorithm]['gen'](graph)
+    elif layoutAlgorithm == 'default' or layoutAlgorithm is None:
+        return {} if default is None else updateLayout(graph, default, layouts)
+    else:
+        print('Unknown Layout algorithm!', layoutAlgorithm)
+        return {} if default is None else updateLayout(graph, default, layouts)
+
+
+def addMinRequirements(graph, layout):
+    """ Adds the minimum requirements to the graph """
+    def update(node, key, value):
+        if key not in node[1]:
+            node[1][key] = value
+
+    graphLayout = None
+    for node in graph.nodes(data=True):
+        if 'pos' not in node[1]:
+            if graphLayout is None:
+                graphLayout = updateLayout(graph, layout, default='spring_layout')
+            data = graphLayout[node[0]]
+            node[1]['pos'] = (data[0], data[1])
+
+        update(node, 'thu', 0.0)
+        update(node, 'thw_wei', 0.5)
+        update(node, 'thw', 0.0)
+        update(node, 'thw_wei', 0.5)
+
+        update(node, 'deg', 0)
+        update(node, 'sis', 0)
+        update(node, 'sir', 0)
+        update(node, 'soc', 0)
+
+    for edge in graph.edges(data=True):
+        if 'weight' not in edge[2]:
+            edge[2]['weight'] = 1    
+    return {} if graphLayout is None else graphLayout
+
+
 def _updateThresholdNode(node, adjacencies, threshold):
-    total = len(adjacencies)
-    count = 0
-    for adjacency in adjacencies.items():
-        if graph.nodes[node]['thw'] > 0.5:
-            count += 1
-    return count <= threshold * total
+    pass
+    #total = len(adjacencies)
+    #count = 0
+    #for adjacency in adjacencies.items():
+    #    if graph.nodes[node]['thw'] > 0.5:
+    #        count += 1
+    #return count <= threshold * total
 
 def updateThreshold(graph, threshold, steps=1):
     state = np.array([node[1]['deg'] for node in graph.nodes(data=True)])

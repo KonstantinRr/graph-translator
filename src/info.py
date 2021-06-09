@@ -2,8 +2,10 @@
 
 """ Contains data representations of objects """
 
-from src.models import *
-from src.tracer import *
+import networkx as nx
+
+import src.models as md
+import src.tracer as tr
 
 __author__ = "Created by Konstantin Rolf | University of Groningen"
 __copyright__ = "Copyright 2021, Konstantin Rolf"
@@ -15,27 +17,102 @@ __email__ = "konstantin.rolf@gmail.com"
 __status__ = "Development"
 
 dropdown_model = {
-    'connections': ('Connections', generateConnectionTracer, 'u', 'con', ContinuesState(0, 100000), updateDeGroot),
-    'degroot': ('DeGroot', generateDeGrootTracer, 'd', 'deg', ContinuesState(0.0, 1.0), updateDeGroot),
-    'threshold_uniform': ('Threshold', generateUniformThresholdTracer, 'u', 'thu', DiscreteState([0, 1]), updateDeGroot),
-    'threshold_weighted': ('Weighted Threshold', generateWeightedThresholdTracer, 'd', 'thw', DiscreteState([0, 1]), updateDeGroot),
-    'sis': ('SIS', generateSISTracer, 'd', 'sis', DiscreteState([0, 2]), updateDeGroot),
-    'sir': ('SIR', generateSIRTracer, 'd', 'sir', DiscreteState([0, 2]), updateDeGroot),
-    'social': ('Social Choice', generateSocialChoiceTracer, 'u', 'soc', DiscreteState([0, 2]), updateDeGroot),
+    'connections': {
+        'name': 'Connections',
+        'gen': tr.generateConnectionTracer,
+        'type': 'u',
+        'id': 'con',
+        'state': md.ContinuesState(0, 100000),
+        'update': md.updateDeGroot,
+    },
+    'degroot': {
+        'name': 'DeGroot',
+        'gen': tr.generateDeGrootTracer,
+        'type': 'd',
+        'id': 'deg',
+        'state': md.ContinuesState(0.0, 1.0),
+        'update': md.updateDeGroot,
+    },
+    'threshold_uniform': {
+        'name': 'Threshold',
+        'gen': tr.generateUniformThresholdTracer,
+        'type': 'u',
+        'id': 'thu',
+        'state': md.DiscreteState([0, 1]),
+        'update': md.updateDeGroot,
+    },
+    'threshold_weighted': {
+        'name': 'Weighted Threshold',
+        'gen': tr.generateWeightedThresholdTracer,
+        'type': 'd',
+        'id': 'thw',
+        'state': md.DiscreteState([0, 1]),
+        'update': md.updateDeGroot,
+    },
+    'sis': {
+        'name': 'SIS',
+        'gen': tr.generateSISTracer,
+        'type': 'd',
+        'id': 'sis',
+        'state': md.DiscreteState([0, 2]),
+        'update': md.updateDeGroot,
+    },
+    'sir': {
+        'name': 'SIR',
+        'gen': tr.generateSIRTracer,
+        'type': 'd',
+        'id': 'sir',
+        'state': md.DiscreteState([0, 2]),
+        'update': md.updateDeGroot,
+    },
+    'social': {
+        'name': 'Social Choice',
+        'gen': tr.generateSocialChoiceTracer,
+        'type': 'u',
+        'id': 'soc',
+        'state': md.DiscreteState([0, 2]),
+        'update': md.updateDeGroot,
+    },
 }
 
-fig_names = [
-    ('bipartite_layout', 'bipartite_layout'),
-    ('circular_layout', 'circular_layout'),
-    ('kamada_kawai_layout', 'kamada_kawai_layout'),
-    ('planar_layout', 'planar_layout'),
-    ('random_layout', 'random_layout'),
-    ('shell_layout', 'shell_layout'),
-    ('spring_layout', 'spring_layout'),
-    ('spectral_layout', 'spectral_layout'),
-    ('spiral_layout', 'spiral_layout'),
-    ('default', 'default'),
-]
+layouts = {
+    'bipartite_layout': {
+        'name': 'Bipartite Layout',
+        'gen': lambda graph: nx.circular_layout(graph),
+    },
+    'circular_layout': {
+        'name': 'Circular Layout',
+        'gen': lambda graph: nx.circular_layout(graph),
+    },
+    'kamada_kawai_layout': {
+        'name': 'Kamada Kawai Layout',
+        'gen': lambda graph: nx.kamada_kawai_layout(graph),
+    },
+    'planar_layout': {
+        'name': 'Planar Layout',
+        'gen': lambda graph: nx.planar_layout(graph),
+    },
+    'random_layout': {
+        'name': 'Random Layout',
+        'gen': lambda graph: nx.random_layout(graph),
+    },
+    'shell_layout': {
+        'name': 'Shell Layout',
+        'gen': lambda graph: nx.shell_layout(graph),
+    },
+    'spring_layout': {
+        'name': 'Spring Layout',
+        'gen': lambda graph: nx.spring_layout(graph),
+    },
+    'spectral_layout': {
+        'name': 'Spectral Layout',
+        'gen': lambda graph: nx.spectral_layout(graph),
+    },
+    'spiral_layout': {
+        'name': 'Spiral Layout',
+        'gen': lambda graph: nx.spiral_layout(graph)
+    },
+}
 
 class intlist: pass
 
@@ -192,5 +269,14 @@ graph_gens = {
         'gen': lambda n: nx.wheel_graph(n),
         'description_fn': 'wheel_graph(n)',
         'description': 'Return the wheel graph',
+    },
+    'random_geometric': {
+        'name': 'Random Geometric',
+        'args': ('n', 'c'),
+        'argtypes': (int, float),
+        'argvals': (100, 0.125),
+        'gen': lambda n, c: nx.random_geometric_graph(n, c),
+        'description_fn': 'random_geometric_graph(n, c)',
+        'description': 'Returns a random geometric graph in the unit cube of dimensions dim.',
     }
 }
