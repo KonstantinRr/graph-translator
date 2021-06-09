@@ -30,41 +30,12 @@ __maintainer__ = "Konstantin Rolf"
 __email__ = "konstantin.rolf@gmail.com"
 __status__ = "Development"
 
-def addMinRequirements(graph, layout):
-    def update(node, key, value):
-        if key not in node[1]:
-            node[1][key] = value
-
-    graphLayout = None
-    for node in graph.nodes(data=True):
-        if 'pos' not in node[1]:
-            if graphLayout is None:
-                graphLayout = updateLayout(graph, layout, layouts, default='spring_layout')
-            data = graphLayout[node[0]]
-            node[1]['pos'] = (data[0], data[1])
-
-        update(node, 'thu', 0.0)
-        update(node, 'thw_wei', 0.5)
-        update(node, 'thw', 0.0)
-        update(node, 'thw_wei', 0.5)
-
-        update(node, 'deg', 0)
-        update(node, 'sis', 0)
-        update(node, 'sir', 0)
-        update(node, 'soc', 0)
-
-    for edge in graph.edges(data=True):
-        if 'weight' not in edge[2]:
-            edge[2]['weight'] = 1    
-    return {} if graphLayout is None else graphLayout
-
 def performStep(graph, modelType, steps=1):
     model = dropdown_model.get(modelType)
     if model is not None:
         model['update'](graph, steps)
     else:
         print(f'Unknown type {model}')
-
 
 def randomSetup(graph, modelType, prob=1.0):
     model = dropdown_model.get(modelType)
@@ -79,8 +50,7 @@ def generateDefaultGraph():
 
 def serveLayout():
     session_id = str(uuid.uuid4())
-    graph = generateDefaultGraph()
-    addMinRequirements(graph, 'default')
+    graph, graphLayout = addMinRequirements(generateDefaultGraph())
 
     return html.Div([
         html.Div([
@@ -91,7 +61,7 @@ def serveLayout():
                         dcc.Dropdown(
                             id='modal-gen-dropdown',
                             options=[{'label': y['name'], 'value': x} for x, y in graph_gens.items()],
-                            value=None,
+                            value=graph_gens_default,
                             style={'left': '0px', 'right': '0px'}
                         ),
                         html.Div([], id='modal-gen-comp', style=col)
@@ -117,13 +87,13 @@ def serveLayout():
             html.Div([dcc.Dropdown(
                 id='dropdown-layout',
                 options=[{'label': val['name'], 'value': key} for key, val in layouts.items()],
-                value=None,
+                value=layouts_default,
                 style={'width': '40vw'}
-            )], style=row),
+            )], style=col),
             html.Div([dcc.Dropdown(
                 id='dropdown-model',
                 options=[{'label': value['name'], 'value': key} for key, value in dropdown_model.items()],
-                value=None,
+                value=dropdown_model_default,
                 style={'width': '40vw'}
             )], style=col),
         ], style=row),
@@ -231,8 +201,7 @@ def update_output_div(graph_json, n_clicks, n_clicks_modal, layout_name, model_n
         return graph_json, generateFigure(graph, graphLayout, model_name, dropdown_model)
     elif source == 'button':
         print(f'Regenerating graph with layout {layout_name}')
-        graph = generateDefaultGraph()
-        graphLayout = addMinRequirements(graph, layout_name)
+        graph, graphLayout = addMinRequirements(generateDefaultGraph())
         return json.loads(nx.jit_data(graph)), generateFigure(graph, graphLayout, model_name, dropdown_model)
     elif source == 'button-step':
         # perform a new step
@@ -241,8 +210,9 @@ def update_output_div(graph_json, n_clicks, n_clicks_modal, layout_name, model_n
         graphLayout = updateLayout(graph, layout_name, layouts)
         return json.loads(nx.jit_data(graph)), generateFigure(graph, graphLayout, model_name, dropdown_model)
     elif source == 'button-conv':
+        # perform the graph conversion
         graph = nx.jit_graph(graph_json)
-        graphLayout = updateLayout(graph, layout_name, layouts)
+        graph, graphLayout = addMinRequirements(convert(graph, 'thu_th', 'weight', 'thu'))
         return json.loads(nx.jit_data(graph)), generateFigure(graph, graphLayout, model_name, dropdown_model)
     elif source == 'button-random-setup':
         graph = nx.jit_graph(graph_json)
@@ -257,9 +227,7 @@ def update_output_div(graph_json, n_clicks, n_clicks_modal, layout_name, model_n
             inputs = [value if value is not None else graph_gen['argvals'][idx]
                 for idx, value in enumerate(graphGenInput)]
             print(f'Generating new graph with layout {graphGenType} with input {inputs}')
-            graph = graph_gen['gen'](*inputs)
-            graphLayout = addMinRequirements(graph, layout_name)
-            #nx.set_node_attributes(graph, graphLayout, 'pos')
+            graph, graphLayout = addMinRequirements(graph_gen['gen'](*inputs))
             return json.loads(nx.jit_data(graph)), generateFigure(graph, graphLayout, model_name, dropdown_model)
 
     print(f'Could not trigger source: {ctx.triggered}')

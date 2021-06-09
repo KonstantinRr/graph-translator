@@ -16,6 +16,7 @@ __maintainer__ = "Konstantin Rolf"
 __email__ = "konstantin.rolf@gmail.com"
 __status__ = "Development"
 
+dropdown_model_default = 'connections'
 dropdown_model = {
     'connections': {
         'name': 'Connections',
@@ -23,7 +24,7 @@ dropdown_model = {
         'type': 'u',
         'id': 'con',
         'state': md.ContinuesState(0, 100000),
-        'update': md.updateDeGroot,
+        'update': md.updateConnections,
     },
     'degroot': {
         'name': 'DeGroot',
@@ -75,6 +76,12 @@ dropdown_model = {
     },
 }
 
+def generateDefaultLayout(graph):
+    return {nodeTuple[0]: nodeTuple[1]['pos']
+        for nodeTuple in graph.nodes(data=True)}
+
+
+layouts_default = 'default'
 layouts = {
     'bipartite_layout': {
         'name': 'Bipartite Layout',
@@ -112,10 +119,15 @@ layouts = {
         'name': 'Spiral Layout',
         'gen': lambda graph: nx.spiral_layout(graph)
     },
+    'default': {
+        'name': 'Default Layout',
+        'gen': generateDefaultLayout,
+    }
 }
 
 class intlist: pass
 
+graph_gens_default = 'random_geometric'
 graph_gens = {
     'balanced_tree': {
         'name': 'Balanced Tree',
