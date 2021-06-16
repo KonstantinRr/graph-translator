@@ -5,6 +5,7 @@
 import uuid
 import json
 import random
+from dash_core_components.Input import Input
 
 import plotly.graph_objects as go
 import networkx as nx
@@ -16,6 +17,7 @@ import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.exceptions import PreventUpdate
 
+import src.designs as designs
 from src.addEdge import addEdge
 from src.tracer import *
 from src.models import *
@@ -42,16 +44,17 @@ def randomSetup(graph, modelType, prob=1.0):
     if model is not None:
         for node in graph.nodes(data=True):
             if random.random() <= prob:
-                node[1][model['id']] = model['state'].random()
+                node[1][model['key']] = model['state'].random()
 
 def generateDefaultGraph():
     defaultGen = graph_gens['random_geometric']
     return defaultGen['gen'](*defaultGen['argvals'])
 
+
 def serveLayout():
     session_id = str(uuid.uuid4())
-    graph, graphLayout = addMinRequirements(generateDefaultGraph())
-
+    graph = addMinRequirements(generateDefaultGraph())
+    tracer = [model_degroot['id'], model_degroot['visual_default']]
     return html.Div([
         html.Div([
             dbc.Modal(
@@ -64,7 +67,7 @@ def serveLayout():
                             value=graph_gens_default,
                             style={'left': '0px', 'right': '0px'}
                         ),
-                        html.Div([], id='modal-gen-comp', style=col)
+                        html.Div([], id='modal-gen-comp', style=designs.col)
                     ]),
                     dbc.ModalFooter([
                         dbc.Button("Close", id="modal-gen-close", className="ml-auto", style={'width': '10em'}),
@@ -75,55 +78,40 @@ def serveLayout():
             )
         ]),
         dcc.Store(data=session_id, id='session-id'),
+        #dcc.Store(data=[], id='session-actions'),
+        #dcc.Store(data=tracer, id={'type': 'session-tracer'),
         dcc.Store(data=json.loads(nx.jit_data(graph)), id='session-graph'),
         html.Div([
-            html.Div([html.Button('Random', id='button', style=but)], style=col),
-            html.Div([html.Button('Generate', id='modal-gen-open', style=but)], style=col),
-            html.Div([html.Button('Convert', id='button-conv', style=but)], style=col),
-            html.Div([html.Button('Step', id='button-step', style=but)], style=col),
-            html.Div([html.Button('Random Setup', id='button-random-setup', style=but)], style=col),
-        ], style=row),
-        html.Div([
-            html.Div([dcc.Dropdown(
-                id='dropdown-layout',
-                options=[{'label': val['name'], 'value': key} for key, val in layouts.items()],
-                value=layouts_default,
-                style={'width': '40vw'}
-            )], style=col),
-            html.Div([dcc.Dropdown(
-                id='dropdown-model',
-                options=[{'label': value['name'], 'value': key} for key, value in dropdown_model.items()],
-                value=dropdown_model_default,
-                style={'width': '40vw'}
-            )], style=col),
-        ], style=row),
+            html.Div([html.Button('Generate', id='modal-gen-open', style=designs.but)], style=designs.col),
+            html.Div([
+                'Layout',
+                html.Div([dcc.Dropdown(
+                    id='dropdown-layout',
+                    options=[{'label': val['name'], 'value': key} for key, val in layouts.items()],
+                    value=layouts_default,
+                    style={'width': '300px'}
+                )], style=designs.col),
+                'Model',
+                html.Div([dcc.Dropdown(
+                    id='dropdown-model',
+                    options=[{'label': value['name'], 'value': key} for key, value in dropdown_model.items()],
+                    value=dropdown_model_default,
+                    style={'width': '300px'}
+                )], style=designs.col),
+            ], style=designs.row),
+        ], style=designs.row),
+        html.Div([model['ui']() for model in dropdown_model.values()], id='tab-specific'),
         dcc.Loading(
             id='loading-1',
             type='default',
             children=dcc.Graph(
                 id='basic-graph',
-                figure=generateFigure(graph, {}, 'connections', dropdown_model),
+                figure=generateFigure(graph, dropdown_model_default, dropdown_model, tracer),
                 style={'height' : '90vh', 'width' : '90vw', 'background-color': 'white'}
             )
         ),
     ])
 
-# stylesheet for a simple column
-col = {
-    'display': 'table-cell'
-}
-# stylesheet for a simple row
-row = { 
-    'display': 'table',
-    'table-layout': 'fixed',
-    'border-spacing': '10px',
-}
-# stylesheet for a simple button
-but = {
-    'height': '50px',
-    'text-align': 'center',
-    'display': 'inline-block',
-}
 external_stylesheets = [
     dbc.themes.BOOTSTRAP,
     'https://codepen.io/chriddyp/pen/bWLwgP.css', # Dash CSS
@@ -133,6 +121,18 @@ app = dash.Dash(external_stylesheets=external_stylesheets)
 app.config.suppress_callback_exceptions = True
 app.layout = serveLayout
 
+actions_exec = {}
+for model in dropdown_model.values():
+    # registers the actions
+    actions_exec[model['id']] = model['actions']
+    # registers the callbacks
+    model['callbacks'](app)
+
+@app.callback(
+    dp.Output('tab-specific', 'children'),
+    dp.Input('dropdown-model', 'value'))
+def update_specific(value):
+    raise PreventUpdate()
 
 @app.callback(
     dp.Output('modal-gen-comp', 'children'),
@@ -164,6 +164,13 @@ def toggle_modal(n1, n2, is_open):
         return not is_open
     return is_open
 
+@app.callback(
+    dp.Output({'type': 'specific', 'index': dp.ALL}, 'style'),
+    dp.Input('dropdown-model', 'value'),
+    dp.State({'type': 'specific', 'index': dp.ALL}, 'id'),)
+def make_input_visible(update, old):
+    if not update: return [{'display': 'none'}] * len(old)
+    return [{'display': 'none'} if update != z['index'] else {} for z in old]
 
 @app.callback(
 [
@@ -172,53 +179,80 @@ def toggle_modal(n1, n2, is_open):
 ],
 [
     dp.Input('session-graph', 'data'),
-    dp.Input('button', 'n_clicks'),
     dp.Input('modal-gen-generate', 'n_clicks'),
     dp.Input('dropdown-layout', 'value'),
     dp.Input('dropdown-model', 'value'),
     dp.Input('modal-gen-dropdown', 'value'),
     dp.Input({'type': 'modal-gen-input', 'index': dp.ALL}, 'value'),
-    dp.Input('button-step', 'n_clicks'),
-    dp.Input('button-conv', 'n_clicks'),
-    dp.Input('button-random-setup', 'n_clicks')
+    dp.Input({'type': 'session-actions', 'index': dp.ALL}, 'data'),
+    dp.Input({'type': 'session-tracer', 'index': dp.ALL}, 'data'),
 ])
-def update_output_div(graph_json, n_clicks, n_clicks_modal, layout_name, model_name, graphGenType, graphGenInput, stepNClicks, convNClicks, randomSetupNClicks):
+def update_output_div(graph_json, n_clicks_modal, layout_name, model_name, graphGenType, graphGenInput, actions, tracer):
     ctx = dash.callback_context
     if not ctx.triggered:
         graph = nx.jit_graph(graph_json)
-        return graph_json, generateFigure(graph, {}, model_name, dropdown_model)
+        return graph_json, generateFigure(graph, model_name, dropdown_model, tracer)
 
     source = ctx.triggered[0]['prop_id'].split('.')[0]
+    try:
+        data = json.loads(source)
+        if isinstance(data, dict):
+            if data['type'] == 'session-actions':
+                if len(actions) == 0:
+                    raise PreventUpdate()
+                for action in actions[data['index']]:
+                    print('ACTION', action)
+                    executor = actions_exec.get(action[0])
+                    if executor is not None:
+                        function = executor.get(action[1])
+                        if function is not None:
+                            graph = nx.jit_graph(graph_json)
+                            newData = function({'graph': graph}, action[2])
+                            graph = newData['graph']
+                            updateLayout(graph, layout_name, layouts)
+                            return (json.loads(nx.jit_data(graph)),
+                                generateFigure(graph, model_name, dropdown_model, tracer))
+                        else:
+                            print(f'Could not find function {action[1]}')
+                    else:
+                        print(f'Could not find executor {action[0]}')
+            elif data['type'] == 'session-tracer':
+                graph = nx.jit_graph(graph_json)
+                return graph_json, generateFigure(graph, model_name, dropdown_model, tracer)
+        
+    except json.JSONDecodeError:
+        pass # we don't have a dynamic type
+
     if source == 'dropdown-layout':
         print(f'Changing layout to {layout_name}')
         graph = nx.jit_graph(graph_json)
-        graphLayout = updateLayout(graph, layout_name, layouts)
-        return graph_json, generateFigure(graph, graphLayout, model_name, dropdown_model)
+        updateLayout(graph, layout_name, layouts)
+        return graph_json, generateFigure(graph, model_name, dropdown_model, tracer)
     elif source == 'dropdown-model':
         print(f'Changing model type to {model_name}')
         graph = nx.jit_graph(graph_json)
-        graphLayout = updateLayout(graph, layout_name, layouts)
-        return graph_json, generateFigure(graph, graphLayout, model_name, dropdown_model)
+        updateLayout(graph, layout_name, layouts)
+        return graph_json, generateFigure(graph, model_name, dropdown_model, tracer)
     elif source == 'button':
         print(f'Regenerating graph with layout {layout_name}')
-        graph, graphLayout = addMinRequirements(generateDefaultGraph())
-        return json.loads(nx.jit_data(graph)), generateFigure(graph, graphLayout, model_name, dropdown_model)
+        graph = addMinRequirements(generateDefaultGraph())
+        return json.loads(nx.jit_data(graph)), generateFigure(graph, model_name, dropdown_model, tracer)
     elif source == 'button-step':
         # perform a new step
         graph = nx.jit_graph(graph_json)
         performStep(graph, model_name)
-        graphLayout = updateLayout(graph, layout_name, layouts)
-        return json.loads(nx.jit_data(graph)), generateFigure(graph, graphLayout, model_name, dropdown_model)
+        updateLayout(graph, layout_name, layouts)
+        return json.loads(nx.jit_data(graph)), generateFigure(graph, model_name, dropdown_model, tracer)
     elif source == 'button-conv':
         # perform the graph conversion
         graph = nx.jit_graph(graph_json)
-        graph, graphLayout = addMinRequirements(convert(graph, 'thu_th', 'weight', 'thu'))
-        return json.loads(nx.jit_data(graph)), generateFigure(graph, graphLayout, model_name, dropdown_model)
+        graph = addMinRequirements(convert(graph, 'thu_th', 'weight', 'thu'))
+        return json.loads(nx.jit_data(graph)), generateFigure(graph, model_name, dropdown_model, tracer)
     elif source == 'button-random-setup':
         graph = nx.jit_graph(graph_json)
         randomSetup(graph, model_name)
-        graphLayout = updateLayout(graph, layout_name, layouts)
-        return json.loads(nx.jit_data(graph)), generateFigure(graph, graphLayout, model_name, dropdown_model)
+        updateLayout(graph, layout_name, layouts)
+        return json.loads(nx.jit_data(graph)), generateFigure(graph, model_name, dropdown_model,tracer)
     elif source == 'modal-gen-generate':
         graph_gen = graph_gens.get(graphGenType)
         if graph_gen is None:
@@ -227,8 +261,8 @@ def update_output_div(graph_json, n_clicks, n_clicks_modal, layout_name, model_n
             inputs = [value if value is not None else graph_gen['argvals'][idx]
                 for idx, value in enumerate(graphGenInput)]
             print(f'Generating new graph with layout {graphGenType} with input {inputs}')
-            graph, graphLayout = addMinRequirements(graph_gen['gen'](*inputs))
-            return json.loads(nx.jit_data(graph)), generateFigure(graph, graphLayout, model_name, dropdown_model)
+            graph = addMinRequirements(graph_gen['gen'](*inputs))
+            return json.loads(nx.jit_data(graph)), generateFigure(graph, model_name, dropdown_model, tracer)
 
     print(f'Could not trigger source: {ctx.triggered}')
     raise PreventUpdate

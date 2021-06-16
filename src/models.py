@@ -37,7 +37,9 @@ class ContinuesState:
 def updateLayout(graph, layoutAlgorithm, layouts):
     """ Updates the layout of the graph """
     if layoutAlgorithm in layouts:
-        return layouts[layoutAlgorithm]['gen'](graph)
+        graphLayout = layouts[layoutAlgorithm]['gen'](graph)
+        for node, pos in graphLayout.items():
+            graph.nodes[node]['layout'] = pos
     else:
         print('UNKNOWN LAYOUT ALGORITHM')
 
@@ -69,7 +71,7 @@ def addMinRequirements(graph):
     for edge in graph.edges(data=True):
         if 'weight' not in edge[2]:
             edge[2]['weight'] = 1    
-    return graph, {} if graphLayout is None else graphLayout
+    return graph
 
 
 def convert(graph, thresholdKey, weightKey, valueKey):
@@ -142,18 +144,6 @@ def updateSocialChoice(graph, steps=1):
 def updateConnections(graph, steps=1):
     pass
 
-def updateDeGroot(graph, steps=1):
-    # create the matrix version of the graph
-    npMatrix = nx.to_numpy_matrix(graph, weight='weight')
-    # calculates the number of steps 
-    convMatrix = np.linalg.matrix_power(npMatrix, steps)
-    # gets the current state as numpy vector
-    state = np.array([node[1]['deg'] for node in graph.nodes(data=True)])
-    # calculates the new state by multiplying with the matrix
-    newState = np.asarray(np.dot(convMatrix, state)).reshape(-1)
-    # apply the new state to the model
-    for val, node in zip(newState, graph.nodes(data=True)):
-        node[1]['deg'] = val
 
 if __name__ == '__main__':
     print('models.py')

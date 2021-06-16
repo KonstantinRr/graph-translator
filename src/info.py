@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
 
 """ Contains data representations of objects """
-
 import networkx as nx
 
+
+import dash_html_components as html
 import src.models as md
 import src.tracer as tr
+
+from src.model_degroot import model_degroot
+from src.model_threshold import model_threshold_uniform
+from src.model_threshold_weighted import model_threshold_weighted
+from src.model_sis import model_sis
+from src.model_sir import model_sir
 
 __author__ = "Created by Konstantin Rolf | University of Groningen"
 __copyright__ = "Copyright 2021, Konstantin Rolf"
@@ -16,64 +23,19 @@ __maintainer__ = "Konstantin Rolf"
 __email__ = "konstantin.rolf@gmail.com"
 __status__ = "Development"
 
-dropdown_model_default = 'connections'
+def build_empty(model_id):
+    return html.Div([], id={'type': 'specific', 'index': model_id}, style={'display': 'none'})
+
+def update_empty(graph, steps=1):
+    pass
+
+dropdown_model_default = model_degroot['id']
 dropdown_model = {
-    'connections': {
-        'name': 'Connections',
-        'gen': tr.generateConnectionTracer,
-        'type': 'u',
-        'id': 'con',
-        'state': md.ContinuesState(0, 100000),
-        'update': md.updateConnections,
-    },
-    'degroot': {
-        'name': 'DeGroot',
-        'gen': tr.generateDeGrootTracer,
-        'type': 'd',
-        'id': 'deg',
-        'state': md.ContinuesState(0.0, 1.0),
-        'update': md.updateDeGroot,
-    },
-    'threshold_uniform': {
-        'name': 'Threshold',
-        'gen': tr.generateUniformThresholdTracer,
-        'type': 'u',
-        'id': 'thu',
-        'state': md.DiscreteState([0, 1]),
-        'update': md.updateDeGroot,
-    },
-    'threshold_weighted': {
-        'name': 'Weighted Threshold',
-        'gen': tr.generateWeightedThresholdTracer,
-        'type': 'd',
-        'id': 'thw',
-        'state': md.DiscreteState([0, 1]),
-        'update': md.updateDeGroot,
-    },
-    'sis': {
-        'name': 'SIS',
-        'gen': tr.generateSISTracer,
-        'type': 'd',
-        'id': 'sis',
-        'state': md.DiscreteState([0, 2]),
-        'update': md.updateDeGroot,
-    },
-    'sir': {
-        'name': 'SIR',
-        'gen': tr.generateSIRTracer,
-        'type': 'd',
-        'id': 'sir',
-        'state': md.DiscreteState([0, 2]),
-        'update': md.updateDeGroot,
-    },
-    'social': {
-        'name': 'Social Choice',
-        'gen': tr.generateSocialChoiceTracer,
-        'type': 'u',
-        'id': 'soc',
-        'state': md.DiscreteState([0, 2]),
-        'update': md.updateDeGroot,
-    },
+    model_degroot['id']: model_degroot, 
+    model_threshold_uniform['id']: model_threshold_uniform,
+    model_threshold_weighted['id']: model_threshold_weighted,
+    model_sis['id']: model_sis,
+    model_sir['id']: model_sir,
 }
 
 def generateDefaultLayout(graph):
@@ -290,5 +252,53 @@ graph_gens = {
         'gen': lambda n, c: nx.random_geometric_graph(n, c),
         'description_fn': 'random_geometric_graph(n, c)',
         'description': 'Returns a random geometric graph in the unit cube of dimensions dim.',
-    }
+    },
+    'margulis_gabber_galil_graph': {
+        'name': 'Margulis Gabber Galil Graph',
+        'args': ('n',),
+        'argtypes': (int,),
+        'argvals': (3,),
+        'gen': lambda n: nx.margulis_gabber_galil_graph(n),
+        'description_fn': 'margulis_gabber_galil_graph(n)',
+        'description': 'Returns the Margulis-Gabber-Galil undirected MultiGraph on n^2 nodes.'
+    },
+    'chordal_cycle_graph': {
+        'name': 'Chordal Cycle Graph',
+        'args': ('p',),
+        'argtypes': (int,),
+        'argvals': (3,),
+        'gen': lambda p:  nx.chordal_cycle_graph(p),
+        'description_fn': 'chordal_cycle_graph(p)',
+        'description': 'Returns the chordal cycle graph on p nodes.',
+    },
+    'paley_graph': {
+        'name': 'Paley Graph',
+        'args': ('p',),
+        'argtypes': (int,),
+        'argvals': (3,),
+        'gen': lambda p: nx.paley_graph(p),
+        'description_fn': 'paley_graph(p)',
+        'description': 'Returns the Paley (p-1)/2-regular graph on p nodes.',
+    },
+    'grid_2d_graph': {
+        'name': 'Grid 2D Graph',
+        'args': ('m', 'n', 'periodic'),
+        'argtypes': (int, int, bool),
+        'argvals': (3, 3, False),
+        'gen': lambda m, n, periodic: nx.grid_2d_graph(m, n, periodic=periodic),
+        'description_fn': 'grid_2d_graph(m, n, periodic)',
+        'description': 'Returns the two-dimensional grid graph.',
+    },
+
+    #grid_graph(dim[, periodic])
+    #Returns the n-dimensional grid graph.
+    #
+    #hexagonal_lattice_graph(m, n[, periodic, …])
+    #Returns an m by n hexagonal lattice graph.
+    #
+    #hypercube_graph(n)
+    #Returns the n-dimensional hypercube graph.
+    #
+    #triangular_lattice_graph(m, n[, periodic, …])
+    #Returns the m by n triangular lattice graph.
 }

@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import networkx as nx
 
 from src.addEdge import addEdge
-
+from src.visual_connections import connection_tracer 
 __author__ = "Created by Konstantin Rolf | University of Groningen"
 __copyright__ = "Copyright 2021, Konstantin Rolf"
 __credits__ = [""]
@@ -22,7 +22,12 @@ __status__ = "Development"
 #'Reds' | 'Blues' | 'Picnic' | 'Rainbow' | 'Portland' | 'Jet' |
 #'Hot' | 'Blackbody' | 'Earth' | 'Electric' | 'Viridis' |
 
-def generateFigure(graph, graphLayout, graphType, models):
+def findNodePos(node):
+    l = node.get('layout')
+    if l is not None: return l
+    return node['pos']
+
+def generateFigure(graph, graphType, models, tracer):
     if graphType in models:
         if isinstance(graph, nx.DiGraph) and models[graphType]['type'] == 'u':
             graph = graph.to_undirected(as_view=True)
@@ -36,8 +41,8 @@ def generateFigure(graph, graphLayout, graphType, models):
     directed = isinstance(graph, nx.DiGraph)
     if directed:
         for edge in graph.edges(data=True):
-            start = (graphLayout[edge[0]] if edge[0] in graphLayout else graph.nodes[edge[0]]['pos'])
-            end = (graphLayout[edge[1]] if edge[1] in graphLayout else graph.nodes[edge[1]]['pos'])
+            start = findNodePos(graph.nodes[edge[0]])
+            end = findNodePos(graph.nodes[edge[1]])
             edge_x, edge_y = addEdge(start, end, edge_x, edge_y, 1.0, 'end', .01, 15, 12)
             if 'weight' in edge[2]: # checks if we have a weight
                 edge_cx.append((start[0] / 3 + end[0] * (2.0 / 3.0)))
@@ -45,8 +50,8 @@ def generateFigure(graph, graphLayout, graphType, models):
                 weights.append(str(edge[2]['weight']))
     else:
         for edge in graph.edges(data=True):
-            x0, y0 = (graphLayout[edge[0]] if edge[0] in graphLayout else graph.nodes[edge[0]]['pos'])
-            x1, y1 = (graphLayout[edge[1]] if edge[1] in graphLayout else graph.nodes[edge[1]]['pos'])
+            x0, y0 = findNodePos(graph.nodes[edge[0]])
+            x1, y1 = findNodePos(graph.nodes[edge[1]])
             edge_x.extend((x0, x1, None))
             edge_y.extend((y0, y1, None))
             if 'weight' in edge[2]: # checks if we have a weight
@@ -56,7 +61,7 @@ def generateFigure(graph, graphLayout, graphType, models):
 
 
     for node in graph.nodes():
-        x, y = (graphLayout[node] if node in graphLayout else graph.nodes[node]['pos'])
+        x, y = findNodePos(graph.nodes[node])
         node_x.append(x)
         node_y.append(y)
 
@@ -74,11 +79,12 @@ def generateFigure(graph, graphLayout, graphType, models):
     )
     edge_text_trace.text = weights
 
-    if graphType in models:
-        node_trace = models[graphType]['gen'](graph, node_x, node_y)
-    else:
-        print(f'Unknown graph type {graphType}')
-        node_trace = generateConnectionTracer(graph, node_x, node_y)
+    try:
+        print('TRACER', tracer)
+        node_trace = models[tracer[0]]['visuals'][tracer[1]]['tracer'](graph, node_x, node_y)
+    except KeyError:
+        print(f'Unknown graph type {graphType} {tracer}')
+        node_trace = connection_tracer(graph, node_x, node_y)
 
     fig = go.Figure(
         data=[edge_trace, node_trace, edge_text_trace],
@@ -102,34 +108,7 @@ def generateFigure(graph, graphLayout, graphType, models):
     )
     return fig
 
-
-def generateConnectionTracer(graph, node_x, node_y):
-    node_trace = go.Scatter(
-        x=node_x, y=node_y,
-        mode='markers',
-        hoverinfo='text',
-        marker=dict(
-            showscale=True,
-            colorscale='YlGnBu',
-            reversescale=True,
-            color=[],
-            size=10,
-            colorbar=dict(
-                thickness=15,
-                title='Node Connections',
-                xanchor='left',
-                titleside='right'
-            ),
-            line_width=2
-        )
-    )
-
-    node_trace.marker.color = [len(adj[1]) for _, adj in enumerate(graph.adjacency())]
-    node_trace.text = ['# of connections: ' + str(len(adj[1]))
-        for _, adj in enumerate(graph.adjacency())]
-    return node_trace
-
-def _generateThresholdTrace(graph, node_x, node_y, key, title, color):
+def generate_trace(graph, node_x, node_y, key, title, color):
     node_trace = go.Scatter(
         x=node_x, y=node_y,
         mode='markers',
@@ -154,29 +133,13 @@ def _generateThresholdTrace(graph, node_x, node_y, key, title, color):
     node_trace.text = [str(node[1][key]) for node in graph.nodes(data=True)]
     return node_trace
 
-def generateUniformThresholdTracer(graph, node_x, node_y):
-    """ Generates the uniform threshold tracer """
-    return _generateThresholdTrace(graph, node_x, node_y, 'thu', 'Uniform Threshold', 'Bluered')
-
-def generateWeightedThresholdTracer(graph, node_x, node_y):
-    """ Generates the weighted threshold tracer """
-    return _generateThresholdTrace(graph, node_x, node_y, 'thw', 'Weighted Threshold', 'Bluered')
-
 def generateSocialChoiceTracer(graph, node_x, node_y):
     """ Generates the social choice tracer """
-    return _generateThresholdTrace(graph, node_x, node_y, 'soc', 'Social Choice', 'Bluered')
-
-def generateDeGrootTracer(graph, node_x, node_y):
-    """ Generates the DeGroot tracer """
-    return _generateThresholdTrace(graph, node_x, node_y, 'deg', 'DeGroot', 'YlGnBu')
-
-def generateSISTracer(graph, node_x, node_y):
-    """ Generates the SIS tracer """
-    return _generateThresholdTrace(graph, node_x, node_y, 'sis', 'SIS', 'Bluered')
+    return generate_trace(graph, node_x, node_y, 'soc', 'Social Choice', 'Bluered')
 
 def generateSIRTracer(graph, node_x, node_y):
     """ Generates the SIR tracer """
-    return _generateThresholdTrace(graph, node_x, node_y, 'sir', 'SIR', 'Bluered')
+    return generate_trace(graph, node_x, node_y, 'sir', 'SIR', 'Bluered')
 
 if __name__ == '__main__':
     print('tracer.py')
