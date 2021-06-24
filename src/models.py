@@ -34,6 +34,13 @@ class ContinuesState:
         return [random.random() * (self.end - self.start) + self.start
             for _ in range(count)]
 
+def stochastic_callback(data, args):
+    if isinstance(data['graph'], nx.Graph):
+        # undirected graph: convert
+        data['graph'] = nx.DiGraph(data['graph'])
+    nx.stochastic_graph(data['graph'], copy=False, weight='weight')
+    return data
+
 def updateLayout(graph, layoutAlgorithm, layouts):
     """ Updates the layout of the graph """
     if layoutAlgorithm in layouts:

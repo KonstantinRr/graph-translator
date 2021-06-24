@@ -78,9 +78,13 @@ def serveLayout():
             )
         ]),
         dcc.Store(data=session_id, id='session-id'),
-        #dcc.Store(data=[], id='session-actions'),
-        #dcc.Store(data=tracer, id={'type': 'session-tracer'),
+        dcc.Store(data=[], id='session-actions'),
+        dcc.Store(data=tracer, id='session-tracer'),
         dcc.Store(data=json.loads(nx.jit_data(graph)), id='session-graph'),
+
+        html.Div([dcc.Store(data=[], id=model['session-tracer']) for model in dropdown_model.values()]),
+        html.Div([dcc.Store(data=[], id=model['session-actions']) for model in dropdown_model.values()]),
+
         html.Div([
             html.Div([html.Button('Generate', id='modal-gen-open', style=designs.but)], style=designs.col),
             html.Div([
@@ -164,6 +168,41 @@ def toggle_modal(n1, n2, is_open):
         return not is_open
     return is_open
 
+
+@app.callback(
+    dp.Output('session-actions', 'data'),
+    [dp.Input(src['session-actions'], 'data') for src in dropdown_model.values()],
+    dp.State('session-actions', 'data'))
+def session_actions_unify(*args):
+    actions, current = args[:-1], args[-1]
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return current
+
+    source = ctx.triggered[0]['prop_id'].split('.')[0]
+    for idx, model in enumerate(dropdown_model.values()):
+        if model['session-actions'] == source:
+            return actions[idx]
+    print('Could not unify action')
+    raise PreventUpdate()
+
+@app.callback(
+    dp.Output('session-tracer', 'data'),
+    [dp.Input(source['session-tracer'], 'data') for source in dropdown_model.values()],
+    dp.State('session-tracer', 'data'),)
+def session_tracer_unify(*args):
+    actions, current = args[:-1], args[-1]
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return current
+
+    source = ctx.triggered[0]['prop_id'].split('.')[0]
+    for idx, model in enumerate(dropdown_model.values()):
+        if model['session-tracer'] == source:
+            return actions[idx]
+    print('Could not unify tracers')
+    raise PreventUpdate()
+
 @app.callback(
     dp.Output({'type': 'specific', 'index': dp.ALL}, 'style'),
     dp.Input('dropdown-model', 'value'),
@@ -184,8 +223,8 @@ def make_input_visible(update, old):
     dp.Input('dropdown-model', 'value'),
     dp.Input('modal-gen-dropdown', 'value'),
     dp.Input({'type': 'modal-gen-input', 'index': dp.ALL}, 'value'),
-    dp.Input({'type': 'session-actions', 'index': dp.ALL}, 'data'),
-    dp.Input({'type': 'session-tracer', 'index': dp.ALL}, 'data'),
+    dp.Input('session-actions', 'data'),
+    dp.Input('session-tracer', 'data'),
 ])
 def update_output_div(graph_json, n_clicks_modal, layout_name, model_name, graphGenType, graphGenInput, actions, tracer):
     ctx = dash.callback_context
@@ -194,34 +233,6 @@ def update_output_div(graph_json, n_clicks_modal, layout_name, model_name, graph
         return graph_json, generateFigure(graph, model_name, dropdown_model, tracer)
 
     source = ctx.triggered[0]['prop_id'].split('.')[0]
-    try:
-        data = json.loads(source)
-        if isinstance(data, dict):
-            if data['type'] == 'session-actions':
-                if len(actions) == 0:
-                    raise PreventUpdate()
-                for action in actions[data['index']]:
-                    print('ACTION', action)
-                    executor = actions_exec.get(action[0])
-                    if executor is not None:
-                        function = executor.get(action[1])
-                        if function is not None:
-                            graph = nx.jit_graph(graph_json)
-                            newData = function({'graph': graph}, action[2])
-                            graph = newData['graph']
-                            updateLayout(graph, layout_name, layouts)
-                            return (json.loads(nx.jit_data(graph)),
-                                generateFigure(graph, model_name, dropdown_model, tracer))
-                        else:
-                            print(f'Could not find function {action[1]}')
-                    else:
-                        print(f'Could not find executor {action[0]}')
-            elif data['type'] == 'session-tracer':
-                graph = nx.jit_graph(graph_json)
-                return graph_json, generateFigure(graph, model_name, dropdown_model, tracer)
-        
-    except json.JSONDecodeError:
-        pass # we don't have a dynamic type
 
     if source == 'dropdown-layout':
         print(f'Changing layout to {layout_name}')
@@ -232,6 +243,28 @@ def update_output_div(graph_json, n_clicks_modal, layout_name, model_name, graph
         print(f'Changing model type to {model_name}')
         graph = nx.jit_graph(graph_json)
         updateLayout(graph, layout_name, layouts)
+        return graph_json, generateFigure(graph, model_name, dropdown_model, tracer)
+    elif source == 'session-actions':
+        if len(actions) == 0:
+            raise PreventUpdate()
+        for action in actions:
+            print('ACTION', action)
+            executor = actions_exec.get(action[0])
+            if executor is not None:
+                function = executor.get(action[1])
+                if function is not None:
+                    graph = nx.jit_graph(graph_json)
+                    newData = function({'graph': graph}, action[2])
+                    graph = newData['graph']
+                    updateLayout(graph, layout_name, layouts)
+                    return (json.loads(nx.jit_data(graph)),
+                        generateFigure(graph, model_name, dropdown_model, tracer))
+                else:
+                    print(f'Could not find function {action[1]}')
+            else:
+                print(f'Could not find executor {action[0]}')
+    elif source == 'session-tracer':
+        graph = nx.jit_graph(graph_json)
         return graph_json, generateFigure(graph, model_name, dropdown_model, tracer)
     elif source == 'button':
         print(f'Regenerating graph with layout {layout_name}')

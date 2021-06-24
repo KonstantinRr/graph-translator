@@ -9,8 +9,8 @@ import src.models as md
 import src.tracer as tr
 
 from src.model_degroot import model_degroot
-from src.model_threshold import model_threshold_uniform
-from src.model_threshold_weighted import model_threshold_weighted
+from src.model_threshold import model_thu
+from src.model_threshold_weighted import model_thw
 from src.model_sis import model_sis
 from src.model_sir import model_sir
 
@@ -32,8 +32,8 @@ def update_empty(graph, steps=1):
 dropdown_model_default = model_degroot['id']
 dropdown_model = {
     model_degroot['id']: model_degroot, 
-    model_threshold_uniform['id']: model_threshold_uniform,
-    model_threshold_weighted['id']: model_threshold_weighted,
+    model_thu['id']: model_thu,
+    model_thw['id']: model_thw,
     model_sis['id']: model_sis,
     model_sir['id']: model_sir,
 }

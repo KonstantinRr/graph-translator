@@ -11,40 +11,92 @@ from dash.exceptions import PreventUpdate
 
 from src.tracer import generate_trace
 from src.models import DiscreteState
+import src.designs as designs
 
 from src.visual import build_visual_selector
 from src.visual_connections import visual_connections
 
-def sis_update(graph, steps=1):
-    pass
+id_sis_button_random = 'sis-button-random'
+id_sis_button_step = 'sis-button-step'
+id_sis_dropdown = 'sis-dropdown'
 
-def sis_actions():
-    return {}
+action_sis_random = 'action_sis_random'
+action_sis_step = 'action_sis_step'
+action_sis_visual = 'action_sis_visual'
+
+def sis_update(args, data):
+    return data
+
+def sis_random(data, args):
+    return data
+
+def sis_build_actions():
+    return {
+        action_sis_random: sis_random,
+        action_sis_step: sis_update,
+    }
 
 def sis_build_callbacks(app):
-    pass
+    @app.callback(
+        dp.Output(model_sis['session-tracer'], 'data'),
+        dp.Input(id_sis_dropdown, 'value'))
+    def tracer_callback(value):
+        return [model_sis['id'], value]
+
+    @app.callback(
+        dp.Output(model_sis['session-actions'], 'data'),
+        dp.Input(id_sis_button_random, 'n_clicks'),
+        dp.Input(id_sis_button_step, 'n_clicks'),)
+    def callback(n1, n2):
+        ctx = dash.callback_context
+        if not ctx.triggered: return []
+        source = ctx.triggered[0]['prop_id'].split('.')[0]
+        if source == id_sis_button_random:
+            return [(model_sis['id'], action_sis_random, {})]
+        elif source == id_sis_button_step:
+            return [(model_sis['id'], action_sis_step, {})]
+        print(f'SIS callback: Could not find property with source: {source}')
+        raise PreventUpdate()
+
 
 def sis_build(model_id):
-    return html.Div([], id={'type': 'specific', 'index': model_id}, style={'display': 'none'})
+    return html.Div(
+        html.Div([
+                html.Div([html.Button('Random', id=id_sis_button_random, style=designs.but)], style=designs.col),
+                html.Div([html.Button('Step', id=id_sis_button_step, style=designs.but)], style=designs.col),
+            ] + build_visual_selector(model_sis, id=id_sis_dropdown),
+            style=designs.row,
+            id={'type': model_sis['id'], 'index': model_sis['id']}
+        ),
+        id={'type': 'specific', 'index': model_id},
+        style={'display': 'none'}
+    )
 
 def sis_tracer(graph, node_x, node_y):
     """ Generates the SIS tracer """
     return generate_trace(graph, node_x, node_y, 'sis', 'SIS', 'Bluered')
 
+visual_sis = {
+    'id': 'tracer_sis',
+    'name': 'SIS',
+    'tracer': sis_tracer,
+}
 
 model_sis = {
     'id': 'sis',
     'name': 'SIS',
     'gen': sis_tracer,
-    'ui': lambda: sis_build('sis'),
+    'ui': lambda: sis_build(model_sis['id']),
     'type': 'd',
     'key': 'sis',
-    'actions': sis_actions(),
+    'actions': sis_build_actions(),
     'callbacks': sis_build_callbacks,
     'state': DiscreteState([0, 2]),
     'update': sis_update,
     'visual_default': visual_connections['id'],
-    'visuals': {
-        visual_connections['id']: visual_connections,
-    }
+    'session-actions': 'session-actions-sis',
+    'session-tracer': 'session-tracer-sis',
+    'visuals': { model['id']: model for model in [
+        visual_connections, visual_sis
+    ]},
 }
