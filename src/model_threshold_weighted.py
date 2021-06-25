@@ -44,8 +44,9 @@ def thw_update(data, args):
     return data
 
 def thw_random(data, args):
+    state = DiscreteState([0, 1])
     for node, data_node in data['graph'].nodes(data=True):
-        data_node[model_thw['key']] = model_thw['state'].random()
+        data_node[model_thw['key']] = state.random()
     return data
 
 def thw_build_actions():
@@ -121,7 +122,6 @@ model_thw = {
     'key': 'thw',
     'actions': thw_build_actions(),
     'callbacks': thw_build_callbacks,
-    'state': DiscreteState([0, 1]),
     'update': threshold_weighted_tracer,
     'session-actions': 'session-actions-thw',
     'session-tracer': 'session-tracer-thw',

@@ -45,8 +45,9 @@ def degroot_update(data, args):
     return data
 
 def degroot_random(data, args):
+    state = ContinuesState(0.0, 1.0),
     for node, data_node in data['graph'].nodes(data=True):
-        data_node[model_degroot['key']] = model_degroot['state'].random()
+        data_node[model_degroot['key']] = state.random()
     return data
 
 def degroot_build(model_id):
@@ -112,7 +113,6 @@ model_degroot = {
     'key': 'deg',
     'actions': degroot_build_actions(),
     'callbacks': build_degroot_callbacks,
-    'state': ContinuesState(0.0, 1.0),
     'update': degroot_update,
     'session-actions': 'session-actions-degroot',
     'session-tracer': 'session-tracer-degroot',

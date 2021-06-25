@@ -28,8 +28,9 @@ def sis_update(data, args):
     return data
 
 def sis_random(data, args):
+    state = DiscreteState([0, 1]),
     for node, data_node in data['graph'].nodes(data=True):
-        data_node[model_sis['key']] = model_sis['state'].random()
+        data_node[model_sis['key']] = state.random()
     return data
 
 def sis_build_actions():
@@ -93,7 +94,6 @@ model_sis = {
     'key': 'sis',
     'actions': sis_build_actions(),
     'callbacks': sis_build_callbacks,
-    'state': DiscreteState([0, 1]),
     'update': sis_update,
     'session-actions': 'session-actions-sis',
     'session-tracer': 'session-tracer-sis',

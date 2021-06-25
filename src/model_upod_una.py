@@ -21,6 +21,8 @@ id_upoduna_button_random = 'upoduna-button-random'
 id_upoduna_button_step = 'upoduna-button-step'
 id_upoduna_button_stochastic = 'upoduna-button-stochastic'
 id_upoduna_dropdown = 'upoduna-dropdown'
+id_upoduna_slider_threshold = 'upoduna-slider-threshold'
+id_upoduna_threshold_id = 'upoduna-slider-threshold-val'
 
 action_upoduna_random = 'action_upoduna_random'
 action_upoduna_stochastic = 'action_upoduna_stochastic'
@@ -31,8 +33,9 @@ def upoduna_update(data, args):
     return data
 
 def upoduna_random(data, args):
+    state = DiscreteState(list(range(args[0])))
     for node, data_node in data['graph'].nodes(data=True):
-        data_node[model_upoduna['key']] = model_upoduna['state'].random()
+        data_node[model_upoduna['key']] = state.random()
     return data
 
 def upoduna_build_actions():
@@ -49,17 +52,24 @@ def upoduna_build_callbacks(app):
         return [model_upoduna['id'], value]
 
     @app.callback(
+        dp.Output(id_upoduna_threshold_id, 'children'),
+        dp.Input(id_upoduna_slider_threshold, 'value'))
+    def slider_update(value):
+        return f'States: {value}'
+
+    @app.callback(
         dp.Output(model_upoduna['session-actions'], 'data'),
         dp.Input(id_upoduna_button_random, 'n_clicks'),
-        dp.Input(id_upoduna_button_step, 'n_clicks'),)
-    def callback(n1, n2):
+        dp.Input(id_upoduna_button_step, 'n_clicks'),
+        dp.State(id_upoduna_slider_threshold, 'value'))
+    def callback(n1, n2, states):
         ctx = dash.callback_context
         if not ctx.triggered: return []
         source = ctx.triggered[0]['prop_id'].split('.')[0]
         if source == id_upoduna_button_random:
-            return [(model_upoduna['id'], action_upoduna_random, {})]
+            return [(model_upoduna['id'], action_upoduna_random, (states,))]
         elif source == id_upoduna_button_step:
-            return [(model_upoduna['id'], action_upoduna_step, {})]
+            return [(model_upoduna['id'], action_upoduna_step, (states,))]
         print(f'UPODUNA callback: Could not find property with source: {source}')
         raise PreventUpdate()
 
@@ -68,6 +78,19 @@ def upoduna_build(model_id):
         html.Div([
                 html.Div([html.Button('Random', id=id_upoduna_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_upoduna_button_step, style=designs.but)], style=designs.col),
+                html.Div(
+                    html.Div(
+                        [
+                            html.Div('States', id=id_upoduna_threshold_id, style={'padding-left': '30px'}),
+                            dcc.Slider(
+                                id=id_upoduna_slider_threshold,
+                                min=2, max=10, step=1, value=2
+                            ),
+                        ],
+                        style={'width': '200px'}
+                    ),
+                    style=designs.col
+                )
             ] + build_visual_selector(model_upoduna, id=id_upoduna_dropdown),
             style=designs.row,
             id={'type': model_upoduna['id'], 'index': model_upoduna['id']}
@@ -94,7 +117,6 @@ model_upoduna = {
     'key': 'upoduna',
     'actions': upoduna_build_actions(),
     'callbacks': upoduna_build_callbacks,
-    'state': DiscreteState([0, 1]),
     'update': tracer_upoduna,
     'session-actions': 'session-actions-upoduna',
     'session-tracer': 'session-tracer-upoduna',

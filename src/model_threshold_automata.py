@@ -30,8 +30,9 @@ def tha_update(data, args):
     return data
 
 def tha_random(data, args):
+    state = DiscreteState([0, 1, 2])
     for node, data_node in data['graph'].nodes(data=True):
-        data_node[model_tha['key']] = model_tha['state'].random()
+        data_node[model_tha['key']] = state.random()
     return data
 
 def tha_build_actions():
@@ -93,7 +94,6 @@ model_tha = {
     'key': 'tha',
     'actions': tha_build_actions(),
     'callbacks': tha_build_callbacks,
-    'state': DiscreteState([0, 1, 2]),
     'update': tha_tracer,
     'session-actions': 'session-actions-tha',
     'session-tracer': 'session-tracer-tha',

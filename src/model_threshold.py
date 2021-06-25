@@ -45,8 +45,9 @@ def thu_update(data, args):
     return data
 
 def thu_random(data, args):
+    state = DiscreteState([0, 1])
     for node, data_node in data['graph'].nodes(data=True):
-        data_node[model_thu['key']] = model_thu['state'].random()
+        data_node[model_thu['key']] = state.random()
     return data
 
 def thu_build_actions():
@@ -128,7 +129,6 @@ model_thu = {
     'key': 'thu',
     'actions': thu_build_actions(),
     'callbacks': threshold_uniform_build_callbacks,
-    'state': DiscreteState([0, 1]),
     'update': thu_update,
     'session-actions': 'session-actions-thu',
     'session-tracer': 'session-tracer-thu',

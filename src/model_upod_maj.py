@@ -34,8 +34,9 @@ def upodmaj_update(data, args):
     return data
 
 def upodmaj_random(data, args):
+    state = DiscreteState(list(range(args[0])))
     for node, data_node in data['graph'].nodes(data=True):
-        data_node[model_upodmaj['key']] = model_upodmaj['state'].random()
+        data_node[model_upodmaj['key']] = state.random()
     return data
 
 def upodmaj_build_actions():
@@ -52,17 +53,24 @@ def upodmaj_build_callbacks(app):
         return [model_upodmaj['id'], value]
 
     @app.callback(
+        dp.Output(id_upodmaj_threshold_id, 'children'),
+        dp.Input(id_upodmaj_slider_threshold, 'value'))
+    def slider_update(value):
+        return f'States: {value}'
+
+    @app.callback(
         dp.Output(model_upodmaj['session-actions'], 'data'),
         dp.Input(id_upodmaj_button_random, 'n_clicks'),
-        dp.Input(id_upodmaj_button_step, 'n_clicks'),)
-    def callback(n1, n2):
+        dp.Input(id_upodmaj_button_step, 'n_clicks'),
+        dp.State(id_upodmaj_slider_threshold, 'value'))
+    def callback(n1, n2, states):
         ctx = dash.callback_context
         if not ctx.triggered: return []
         source = ctx.triggered[0]['prop_id'].split('.')[0]
         if source == id_upodmaj_button_random:
-            return [(model_upodmaj['id'], action_upodmaj_random, {})]
+            return [(model_upodmaj['id'], action_upodmaj_random, (states,))]
         elif source == id_upodmaj_button_step:
-            return [(model_upodmaj['id'], action_upodmaj_step, {})]
+            return [(model_upodmaj['id'], action_upodmaj_step, (states,))]
         print(f'UPODMAJ callback: Could not find property with source: {source}')
         raise PreventUpdate()
 
@@ -110,7 +118,6 @@ model_upodmaj = {
     'key': 'upodmaj',
     'actions': upodmaj_build_actions(),
     'callbacks': upodmaj_build_callbacks,
-    'state': DiscreteState([0, 1]),
     'update': tracer_upodmaj,
     'session-actions': 'session-actions-upodmaj',
     'session-tracer': 'session-tracer-upodmaj',

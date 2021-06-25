@@ -31,8 +31,9 @@ def sir_update(data, args):
 
 
 def sir_random(data, args):
+    state = DiscreteState([0, 1, 2]),
     for node, data_node in data['graph'].nodes(data=True):
-        data_node[model_sir['key']] = model_sir['state'].random()
+        data_node[model_sir['key']] = state.random()
     return data
 
 def sir_build_actions():
@@ -95,7 +96,6 @@ model_sir = {
     'key': 'sir',
     'actions': sir_build_actions(),
     'callbacks': sir_build_callbacks,
-    'state': DiscreteState([0, 1, 2]),
     'update': sir_update,
     'session-actions': 'session-actions-sir',
     'session-tracer': 'session-tracer-sir',

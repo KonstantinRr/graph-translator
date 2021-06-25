@@ -35,19 +35,6 @@ __maintainer__ = "Konstantin Rolf"
 __email__ = "konstantin.rolf@gmail.com"
 __status__ = "Development"
 
-def performStep(graph, modelType, steps=1):
-    model = dropdown_model.get(modelType)
-    if model is not None:
-        model['update'](graph, steps)
-    else:
-        print(f'Unknown type {model}')
-
-def randomSetup(graph, modelType, prob=1.0):
-    model = dropdown_model.get(modelType)
-    if model is not None:
-        for node in graph.nodes(data=True):
-            if random.random() <= prob:
-                node[1][model['key']] = model['state'].random()
 
 def generateDefaultGraph():
     defaultGen = graph_gens['random_geometric']
