@@ -32,6 +32,24 @@ action_upoduna_step = 'action_upoduna_step'
 action_upoduna_visual = 'action_upoduna_visual'
 
 def upoduna_update(data, args):
+    graph = data['graph']
+    upoduna_key = model_upoduna['key']
+    for _ in range(args['steps']):
+        update_dict = {}
+        for srcNode, adjacency in graph.adjacency():
+            counts = {state: 0 for state in range(args['states'])} 
+            total = len(adjacency)
+            for dstNode in adjacency.keys():
+                counts[graph.nodes[dstNode][upoduna_key]] += 1
+
+            for key, value in counts.items():
+                if value == total:
+                    update_dict[srcNode] = key
+                    break
+
+        for key, value in update_dict.items():
+            graph.nodes[key][upoduna_key] = value 
+
     return data
 
 def upoduna_random(data, args):

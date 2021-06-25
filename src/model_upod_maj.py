@@ -1,4 +1,5 @@
 
+import operator
 
 import numpy as np
 import networkx as nx
@@ -32,6 +33,23 @@ action_upodmaj_step = 'action_upodmaj_step'
 action_upodmaj_visual = 'action_upodmaj_visual'
 
 def upodmaj_update(data, args):
+    graph = data['graph']
+    upodmaj_key = model_upodmaj['key']
+    for _ in range(args['steps']):
+        update_dict = {}
+        for srcNode, adjacency in graph.adjacency():
+            counts = {state: 0 for state in range(args['states'])} 
+            for dstNode in adjacency.keys():
+                counts[graph.nodes[dstNode][upodmaj_key]] += 1
+
+            max_key, max_val = max(counts.items(), key=operator.itemgetter(1))
+            del counts[max_key]
+            if max_val > max(counts.values()):
+                update_dict[srcNode] = max_key
+
+        for key, value in update_dict.items():
+            graph.nodes[key][upodmaj_key] = value 
+
     return data
 
 def upodmaj_random(data, args):

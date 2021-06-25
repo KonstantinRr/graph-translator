@@ -42,6 +42,7 @@ def degroot_update(data, args):
     state = np.array([node[1]['deg'] for node in graph.nodes(data=True)])
     # calculates the new state by multiplying with the matrix
     newState = np.asarray(np.dot(convMatrix, state)).reshape(-1)
+    newState = np.clip(newState, 0.0, 1.0)
     # apply the new state to the model
     for val, node in zip(newState, graph.nodes(data=True)):
         node[1]['deg'] = val
