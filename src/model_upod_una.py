@@ -114,6 +114,7 @@ model_upoduna = {
     'name': 'UPOD Unanimity',
     'ui': lambda: upoduna_build(model_upoduna['id']),
     'type': 'u',
+    'weighted': False,
     'key': 'upoduna',
     'actions': upoduna_build_actions(),
     'callbacks': upoduna_build_callbacks,

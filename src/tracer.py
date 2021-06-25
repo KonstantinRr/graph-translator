@@ -72,21 +72,24 @@ def generateFigure(graph, graphType, models, tracer):
         mode='lines',
     )
 
-    edge_text_trace = go.Scatter(
-        x=edge_cx, y=edge_cy,
-        mode='markers',
-        hoverinfo='text',
-    )
-    edge_text_trace.text = weights
-
     try:
         node_trace = models[tracer[0]]['visuals'][tracer[1]]['tracer'](graph, node_x, node_y)
     except KeyError:
         print(f'Unknown graph type {graphType} {tracer}')
         node_trace = connection_tracer(graph, node_x, node_y)
 
+    traces = [edge_trace, node_trace]
+    if models[graphType]['weighted']:
+        edge_text_trace = go.Scatter(
+            x=edge_cx, y=edge_cy,
+            mode='markers',
+            hoverinfo='text',
+        )
+        edge_text_trace.text = weights
+        traces.append(edge_text_trace)
+
     fig = go.Figure(
-        data=[edge_trace, node_trace, edge_text_trace],
+        data=traces,
         layout=go.Layout(
             title='Network Graph Translator',
             titlefont_size=16,

@@ -92,6 +92,7 @@ model_sis = {
     'ui': lambda: sis_build(model_sis['id']),
     'type': 'd',
     'key': 'sis',
+    'weighted': False,
     'actions': sis_build_actions(),
     'callbacks': sis_build_callbacks,
     'update': sis_update,

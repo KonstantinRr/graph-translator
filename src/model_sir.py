@@ -93,6 +93,7 @@ model_sir = {
     'gen': sir_tracer,
     'ui': lambda: sir_build(model_sir['id']),
     'type': 'd',
+    'weighted': False,
     'key': 'sir',
     'actions': sir_build_actions(),
     'callbacks': sir_build_callbacks,

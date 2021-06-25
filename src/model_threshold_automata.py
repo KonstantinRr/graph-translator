@@ -91,6 +91,7 @@ model_tha = {
     'name': 'Threshold Automata',
     'ui': lambda: tha_build(model_tha['id']),
     'type': 'd',
+    'weighted': False,
     'key': 'tha',
     'actions': tha_build_actions(),
     'callbacks': tha_build_callbacks,

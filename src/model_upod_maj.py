@@ -115,6 +115,7 @@ model_upodmaj = {
     'name': 'UPOD Majority',
     'ui': lambda: upodmaj_build(model_upodmaj['id']),
     'type': 'u',
+    'weighted': False,
     'key': 'upodmaj',
     'actions': upodmaj_build_actions(),
     'callbacks': upodmaj_build_callbacks,

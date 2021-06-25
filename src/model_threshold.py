@@ -126,6 +126,7 @@ model_thu = {
     'gen': threshold_uniform_tracer,
     'ui': lambda: threshold_uniform_build(model_thu['id']),
     'type': 'u',
+    'weighted': False,
     'key': 'thu',
     'actions': thu_build_actions(),
     'callbacks': threshold_uniform_build_callbacks,

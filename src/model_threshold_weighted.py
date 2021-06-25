@@ -119,6 +119,7 @@ model_thw = {
     'name': 'Weighted Threshold',
     'ui': lambda: threshold_weighted_build(model_thw['id']),
     'type': 'd',
+    'weighted': True,
     'key': 'thw',
     'actions': thw_build_actions(),
     'callbacks': thw_build_callbacks,

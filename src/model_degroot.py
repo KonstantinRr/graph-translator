@@ -110,6 +110,7 @@ model_degroot = {
     'name': 'DeGroot',
     'ui': lambda: degroot_build(model_degroot['id']),
     'type': 'd',
+    'weighted': True,
     'key': 'deg',
     'actions': degroot_build_actions(),
     'callbacks': build_degroot_callbacks,
