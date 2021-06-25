@@ -14,7 +14,7 @@ from src.tracer import generate_trace
 from src.models import DiscreteState, stochastic_callback
 import src.designs as designs
 
-from src.visual import build_visual_selector
+from src.visual import build_visual_selector, build_step_callback, build_step_slider
 from src.visual_connections import visual_connections
 
 id_upodmaj_button_random = 'upodmaj-button-random'
@@ -23,7 +23,8 @@ id_upodmaj_button_stochastic = 'upodmaj-button-stochastic'
 id_upodmaj_dropdown = 'upodmaj-dropdown'
 id_upodmaj_slider_threshold = 'upodmaj-slider-threshold'
 id_upodmaj_threshold_id = 'upodmaj-slider-threshold-val'
-
+id_upodmaj_slider_steps = 'upodmaj-slider-steps'
+id_upodmaj_slider_steps_value = 'upodmaj-slider-steps-value'
 
 action_upodmaj_random = 'action_upodmaj_random'
 action_upodmaj_stochastic = 'action_upodmaj_stochastic'
@@ -34,7 +35,7 @@ def upodmaj_update(data, args):
     return data
 
 def upodmaj_random(data, args):
-    state = DiscreteState(list(range(args[0])))
+    state = DiscreteState(list(range(args['states'])))
     for node, data_node in data['graph'].nodes(data=True):
         data_node[model_upodmaj['key']] = state.random()
     return data
@@ -46,6 +47,8 @@ def upodmaj_build_actions():
     }
 
 def upodmaj_build_callbacks(app):
+    build_step_callback(app, id_upodmaj_slider_steps_value, id_upodmaj_slider_steps, 'Steps')
+
     @app.callback(
         dp.Output(model_upodmaj['session-tracer'], 'data'),
         dp.Input(id_upodmaj_dropdown, 'value'))
@@ -62,15 +65,17 @@ def upodmaj_build_callbacks(app):
         dp.Output(model_upodmaj['session-actions'], 'data'),
         dp.Input(id_upodmaj_button_random, 'n_clicks'),
         dp.Input(id_upodmaj_button_step, 'n_clicks'),
-        dp.State(id_upodmaj_slider_threshold, 'value'))
-    def callback(n1, n2, states):
+        dp.State(id_upodmaj_slider_threshold, 'value'),
+        dp.State(id_upodmaj_slider_steps, 'value'))
+    def callback(n1, n2, states, steps):
         ctx = dash.callback_context
         if not ctx.triggered: return []
         source = ctx.triggered[0]['prop_id'].split('.')[0]
+        args = {'states': states, 'steps': steps}
         if source == id_upodmaj_button_random:
-            return [(model_upodmaj['id'], action_upodmaj_random, (states,))]
+            return [(model_upodmaj['id'], action_upodmaj_random, args)]
         elif source == id_upodmaj_button_step:
-            return [(model_upodmaj['id'], action_upodmaj_step, (states,))]
+            return [(model_upodmaj['id'], action_upodmaj_step, args)]
         print(f'UPODMAJ callback: Could not find property with source: {source}')
         raise PreventUpdate()
 
@@ -79,6 +84,8 @@ def upodmaj_build(model_id):
         html.Div([
                 html.Div([html.Button('Random', id=id_upodmaj_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_upodmaj_button_step, style=designs.but)], style=designs.col),
+                html.Div([build_step_slider(
+                    id_upodmaj_slider_steps_value, id_upodmaj_slider_steps, 'Steps')], style=designs.col),
                 html.Div(
                     html.Div(
                         [

@@ -13,13 +13,15 @@ from src.tracer import generate_trace
 from src.models import DiscreteState
 import src.designs as designs
 
-from src.visual import build_visual_selector
+from src.visual import build_visual_selector, build_step_slider, build_step_callback
 from src.visual_connections import visual_connections
 
 
 id_sir_button_random = 'sir-button-random'
 id_sir_button_step = 'sir-button-step'
 id_sir_dropdown = 'sir-dropdown'
+id_sir_slider_steps = 'sir-slider-steps'
+id_sir_slider_steps_value = 'sir-slider-steps-value'
 
 action_sir_random = 'action_sir_random'
 action_sir_step = 'action_sir_step'
@@ -31,7 +33,7 @@ def sir_update(data, args):
 
 
 def sir_random(data, args):
-    state = DiscreteState([0, 1, 2]),
+    state = DiscreteState([0, 1, 2])
     for node, data_node in data['graph'].nodes(data=True):
         data_node[model_sir['key']] = state.random()
     return data
@@ -43,6 +45,8 @@ def sir_build_actions():
     }
 
 def sir_build_callbacks(app):
+    build_step_callback(app, id_sir_slider_steps_value, id_sir_slider_steps, 'Steps')
+
     @app.callback(
         dp.Output(model_sir['session-tracer'], 'data'),
         dp.Input(id_sir_dropdown, 'value'))
@@ -52,15 +56,17 @@ def sir_build_callbacks(app):
     @app.callback(
         dp.Output(model_sir['session-actions'], 'data'),
         dp.Input(id_sir_button_random, 'n_clicks'),
-        dp.Input(id_sir_button_step, 'n_clicks'),)
-    def callback(n1, n2):
+        dp.Input(id_sir_button_step, 'n_clicks'),
+        dp.State(id_sir_slider_steps, 'value'))
+    def callback(n1, n2, steps):
         ctx = dash.callback_context
         if not ctx.triggered: return []
         source = ctx.triggered[0]['prop_id'].split('.')[0]
+        args = {'steps': steps}
         if source == id_sir_button_random:
-            return [(model_sir['id'], action_sir_random, {})]
+            return [(model_sir['id'], action_sir_random, args)]
         elif source == id_sir_button_step:
-            return [(model_sir['id'], action_sir_step, {})]
+            return [(model_sir['id'], action_sir_step, args)]
         print(f'SIR callback: Could not find property with source: {source}')
         raise PreventUpdate()
 
@@ -69,6 +75,8 @@ def sir_build(model_id):
         html.Div([
                 html.Div([html.Button('Random', id=id_sir_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_sir_button_step, style=designs.but)], style=designs.col),
+                html.Div([build_step_slider(
+                    id_sir_slider_steps_value, id_sir_slider_steps, 'Steps')], style=designs.col)
             ] + build_visual_selector(model_sir, id=id_sir_dropdown),
             style=designs.row,
             id={'type': model_sir['id'], 'index': model_sir['id']}

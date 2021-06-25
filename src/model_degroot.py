@@ -13,13 +13,15 @@ from src.tracer import generate_trace
 from src.models import ContinuesState, stochastic_callback
 import src.designs as designs
 
-from src.visual import build_visual_selector
+from src.visual import build_visual_selector, build_step_callback, build_step_slider
 from src.visual_connections import visual_connections
 
 id_degroot_button_random = 'degroot-button-random'
 id_degroot_button_stochastic = 'degroot-button-stochastic'
 id_degroot_button_step = 'degroot-button-step'
 id_degroot_dropdown = 'degroot-dropdown'
+id_degroot_slider_steps = 'degroot-slider-steps'
+id_degroot_slider_steps_value = 'degroot-slider-steps-value'
 
 action_degroot_random = 'action_degroot_random'
 action_degroot_stochastic = 'action_degroot_stochastic'
@@ -29,12 +31,13 @@ action_degroot_visual = 'action_degroot_visual'
 def degroot_update(data, args):
     transpose = True
     graph = data['graph']
+
     # create the matrix version of the graph
     npMatrix = nx.to_numpy_matrix(graph, weight='weight')
     if transpose:
         npMatrix = np.transpose(npMatrix)
     # calculates the number of steps 
-    convMatrix = np.linalg.matrix_power(npMatrix, 1)
+    convMatrix = np.linalg.matrix_power(npMatrix, args['steps'])
     # gets the current state as numpy vector
     state = np.array([node[1]['deg'] for node in graph.nodes(data=True)])
     # calculates the new state by multiplying with the matrix
@@ -45,7 +48,7 @@ def degroot_update(data, args):
     return data
 
 def degroot_random(data, args):
-    state = ContinuesState(0.0, 1.0),
+    state = ContinuesState(0.0, 1.0)
     for node, data_node in data['graph'].nodes(data=True):
         data_node[model_degroot['key']] = state.random()
     return data
@@ -56,6 +59,8 @@ def degroot_build(model_id):
                 html.Div([html.Button('Random', id=id_degroot_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Stochastic', id=id_degroot_button_stochastic, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_degroot_button_step, style=designs.but)], style=designs.col),
+                html.Div([build_step_slider(
+                    id_degroot_slider_steps_value, id_degroot_slider_steps, 'Steps')], style=designs.col)
             ] + build_visual_selector(model_degroot, id=id_degroot_dropdown),
             style=designs.row,
             id={'type': model_degroot['id'], 'index': model_degroot['id']}
@@ -72,6 +77,7 @@ def degroot_build_actions():
     }
 
 def build_degroot_callbacks(app):
+    build_step_callback(app, id_degroot_slider_steps_value, id_degroot_slider_steps, 'Steps')
     @app.callback(
         dp.Output('session-tracer-degroot', 'data'),
         dp.Input(id_degroot_dropdown, 'value'))
@@ -82,17 +88,19 @@ def build_degroot_callbacks(app):
         dp.Output('session-actions-degroot', 'data'),
         dp.Input(id_degroot_button_random, 'n_clicks'),
         dp.Input(id_degroot_button_stochastic, 'n_clicks'),
-        dp.Input(id_degroot_button_step, 'n_clicks'),)
-    def callback(n1, n2, n3):
+        dp.Input(id_degroot_button_step, 'n_clicks'),
+        dp.State(id_degroot_slider_steps, 'value'))
+    def callback(n1, n2, n3, steps):
         ctx = dash.callback_context
         if not ctx.triggered: return []
         source = ctx.triggered[0]['prop_id'].split('.')[0]
+        args = {'steps': steps}
         if source == id_degroot_button_random:
-            return [(model_degroot['id'], action_degroot_random, {})]
+            return [(model_degroot['id'], action_degroot_random, args)]
         elif source == id_degroot_button_stochastic:
-            return [(model_degroot['id'], action_degroot_stochastic, {})]
+            return [(model_degroot['id'], action_degroot_stochastic, args)]
         elif source == id_degroot_button_step:
-            return [(model_degroot['id'], action_degroot_step, {})]
+            return [(model_degroot['id'], action_degroot_step, args)]
         print(f'DeGroot callback: Could not find property with source: {source}')
         raise PreventUpdate()
 

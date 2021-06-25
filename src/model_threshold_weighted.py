@@ -14,13 +14,15 @@ from src.tracer import generate_trace
 from src.models import DiscreteState, stochastic_callback
 import src.designs as designs
 
-from src.visual import build_visual_selector
+from src.visual import build_visual_selector, build_step_slider, build_step_callback
 from src.visual_connections import visual_connections
 
 id_thw_button_random = 'thw-button-random'
 id_thw_button_step = 'thw-button-step'
 id_thw_button_stochastic = 'thw-button-stochastic'
 id_thw_dropdown = 'thw-dropdown'
+id_thw_slider_steps = 'thw-slider-steps'
+id_thw_slider_steps_value = 'thw-slider-steps-value'
 
 action_thw_random = 'action_thw_random'
 action_thw_stochastic = 'action_thw_stochastic'
@@ -57,6 +59,8 @@ def thw_build_actions():
     }
 
 def thw_build_callbacks(app):
+    build_step_callback(app, id_thw_slider_steps_value, id_thw_slider_steps, 'Steps')
+
     @app.callback(
         dp.Output(model_thw['session-tracer'], 'data'),
         dp.Input(id_thw_dropdown, 'value'))
@@ -67,17 +71,19 @@ def thw_build_callbacks(app):
         dp.Output(model_thw['session-actions'], 'data'),
         dp.Input(id_thw_button_random, 'n_clicks'),
         dp.Input(id_thw_button_stochastic, 'n_clicks'),
-        dp.Input(id_thw_button_step, 'n_clicks'),)
-    def callback(n1, n2, n3):
+        dp.Input(id_thw_button_step, 'n_clicks'),
+        dp.State(id_thw_slider_steps, 'value'))
+    def callback(n1, n2, n3, steps):
         ctx = dash.callback_context
         if not ctx.triggered: return []
         source = ctx.triggered[0]['prop_id'].split('.')[0]
+        args = {'steps': steps}
         if source == id_thw_button_random:
-            return [(model_thw['id'], action_thw_random, {})]
+            return [(model_thw['id'], action_thw_random, args)]
         elif source == id_thw_button_stochastic:
-            return [(model_thw['id'], action_thw_stochastic, {})]
+            return [(model_thw['id'], action_thw_stochastic, args)]
         elif source == id_thw_button_step:
-            return [(model_thw['id'], action_thw_step, {})]
+            return [(model_thw['id'], action_thw_step, args)]
         print(f'THW callback: Could not find property with source: {source}')
         raise PreventUpdate()
 
@@ -87,6 +93,8 @@ def threshold_weighted_build(model_id):
                 html.Div([html.Button('Random', id=id_thw_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Stochastic', id=id_thw_button_stochastic, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_thw_button_step, style=designs.but)], style=designs.col),
+                html.Div([build_step_slider(
+                    id_thw_slider_steps_value, id_thw_slider_steps, 'Steps')], style=designs.col)
             ] + build_visual_selector(model_thw, id=id_thw_dropdown),
             style=designs.row,
             id={'type': model_thw['id'], 'index': model_thw['id']}

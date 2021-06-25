@@ -14,7 +14,7 @@ from src.tracer import generate_trace
 from src.models import DiscreteState, stochastic_callback
 import src.designs as designs
 
-from src.visual import build_visual_selector
+from src.visual import build_visual_selector, build_step_slider, build_step_callback
 from src.visual_connections import visual_connections
 
 id_upoduna_button_random = 'upoduna-button-random'
@@ -23,6 +23,8 @@ id_upoduna_button_stochastic = 'upoduna-button-stochastic'
 id_upoduna_dropdown = 'upoduna-dropdown'
 id_upoduna_slider_threshold = 'upoduna-slider-threshold'
 id_upoduna_threshold_id = 'upoduna-slider-threshold-val'
+id_upoduna_slider_steps = 'upoduna-slider-steps'
+id_upoduna_slider_steps_value = 'upoduna-slider-steps-value'
 
 action_upoduna_random = 'action_upoduna_random'
 action_upoduna_stochastic = 'action_upoduna_stochastic'
@@ -33,7 +35,7 @@ def upoduna_update(data, args):
     return data
 
 def upoduna_random(data, args):
-    state = DiscreteState(list(range(args[0])))
+    state = DiscreteState(list(range(args['states'])))
     for node, data_node in data['graph'].nodes(data=True):
         data_node[model_upoduna['key']] = state.random()
     return data
@@ -45,6 +47,8 @@ def upoduna_build_actions():
     }
 
 def upoduna_build_callbacks(app):
+    build_step_callback(app, id_upoduna_slider_steps_value, id_upoduna_slider_steps, 'Steps')
+    
     @app.callback(
         dp.Output(model_upoduna['session-tracer'], 'data'),
         dp.Input(id_upoduna_dropdown, 'value'))
@@ -61,15 +65,17 @@ def upoduna_build_callbacks(app):
         dp.Output(model_upoduna['session-actions'], 'data'),
         dp.Input(id_upoduna_button_random, 'n_clicks'),
         dp.Input(id_upoduna_button_step, 'n_clicks'),
-        dp.State(id_upoduna_slider_threshold, 'value'))
-    def callback(n1, n2, states):
+        dp.State(id_upoduna_slider_threshold, 'value'),
+        dp.State(id_upoduna_slider_steps, 'value'))
+    def callback(n1, n2, states, steps):
         ctx = dash.callback_context
         if not ctx.triggered: return []
         source = ctx.triggered[0]['prop_id'].split('.')[0]
+        args = {'states': states, 'steps': steps}
         if source == id_upoduna_button_random:
-            return [(model_upoduna['id'], action_upoduna_random, (states,))]
+            return [(model_upoduna['id'], action_upoduna_random, args)]
         elif source == id_upoduna_button_step:
-            return [(model_upoduna['id'], action_upoduna_step, (states,))]
+            return [(model_upoduna['id'], action_upoduna_step, args)]
         print(f'UPODUNA callback: Could not find property with source: {source}')
         raise PreventUpdate()
 
@@ -78,6 +84,8 @@ def upoduna_build(model_id):
         html.Div([
                 html.Div([html.Button('Random', id=id_upoduna_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_upoduna_button_step, style=designs.but)], style=designs.col),
+                html.Div([build_step_slider(
+                    id_upoduna_slider_steps_value, id_upoduna_slider_steps, 'Steps')], style=designs.col),
                 html.Div(
                     html.Div(
                         [

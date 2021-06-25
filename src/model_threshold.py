@@ -15,7 +15,7 @@ from src.tracer import generate_trace
 from src.models import DiscreteState
 import src.designs as designs
 
-from src.visual import build_visual_selector
+from src.visual import build_visual_selector, build_step_slider, build_step_callback
 from src.visual_connections import visual_connections
 
 id_thu_button_random = 'thu-button-random'
@@ -23,25 +23,30 @@ id_thu_button_step = 'thu-button-step'
 id_thu_dropdown = 'thu-dropdown'
 id_thu_slider_threshold = 'thu-slider-threshold'
 id_thu_threshold_id = 'thu-slider-threshold-val'
+id_thu_slider_steps = 'thu-slider-steps'
+id_thu_slider_steps_value = 'thu-slider-steps-value'
 
 action_thu_random = 'action_thu_random'
 action_thu_step = 'action_thu_step'
 action_thu_visual = 'action_thu_visual'
 
 def thu_update(data, args):
+    threshold = args['threshold']
     graph = data['graph']
     thu_key = model_thu['key']
-    update_dict = {}
-    for srcNode, adjacency in graph.adjacency():
-        count, total = 0, len(adjacency)
-        for dstNode in adjacency.keys():
-            if graph.nodes[dstNode][thu_key] > 0.5:
-                count += 1
-        update_dict[srcNode] = 0 if count <= 0.5 * total else 1
 
-    # applies the update dictionary
-    for key, value in update_dict.items():
-        graph.nodes[key][thu_key] = value
+    for i in range(args['steps']):
+        update_dict = {}
+        for srcNode, adjacency in graph.adjacency():
+            count, total = 0, len(adjacency)
+            for dstNode in adjacency.keys():
+                if graph.nodes[dstNode][thu_key] > 0.5:
+                    count += 1
+            update_dict[srcNode] = 0 if count < threshold * total else 1
+
+        # applies the update dictionary
+        for key, value in update_dict.items():
+            graph.nodes[key][thu_key] = value
     return data
 
 def thu_random(data, args):
@@ -50,6 +55,7 @@ def thu_random(data, args):
         data_node[model_thu['key']] = state.random()
     return data
 
+
 def thu_build_actions():
     return {
         action_thu_random: thu_random, 
@@ -57,6 +63,8 @@ def thu_build_actions():
     }
 
 def threshold_uniform_build_callbacks(app):
+    build_step_callback(app, id_thu_slider_steps_value, id_thu_slider_steps, 'Steps')
+
     @app.callback(
         dp.Output(model_thu['session-tracer'], 'data'),
         dp.Input(id_thu_dropdown, 'value'))
@@ -72,15 +80,18 @@ def threshold_uniform_build_callbacks(app):
     @app.callback(
         dp.Output(model_thu['session-actions'], 'data'),
         dp.Input(id_thu_button_random, 'n_clicks'),
-        dp.Input(id_thu_button_step, 'n_clicks'),)
-    def callback(n1, n3):
+        dp.Input(id_thu_button_step, 'n_clicks'),
+        dp.State(id_thu_slider_threshold, 'value'),
+        dp.State(id_thu_slider_steps, 'value'))
+    def callback(n1, n2, threshold, steps):
         ctx = dash.callback_context
         if not ctx.triggered: return []
         source = ctx.triggered[0]['prop_id'].split('.')[0]
+        args = {'threshold': threshold, 'steps': steps}
         if source == id_thu_button_random:
-            return [(model_thu['id'], action_thu_random, {})]
+            return [(model_thu['id'], action_thu_random, args)]
         elif source == id_thu_button_step:
-            return [(model_thu['id'], action_thu_step, {})]
+            return [(model_thu['id'], action_thu_step, args)]
         print(f'THW callback: Could not find property with source: {source}')
         raise PreventUpdate()
 
@@ -89,6 +100,9 @@ def threshold_uniform_build(model_id):
         html.Div([
                 html.Div([html.Button('Random', id=id_thu_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_thu_button_step, style=designs.but)], style=designs.col),
+                html.Div([build_step_slider(
+                    id_thu_slider_steps_value, id_thu_slider_steps, 'Steps')], style=designs.col),
+                
                 html.Div(
                     html.Div(
                         [
