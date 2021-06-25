@@ -53,7 +53,9 @@ def input_generate(data, args):
 def serveLayout():
     session_id = str(uuid.uuid4())
     graph = addMinRequirements(generateDefaultGraph())
-    tracer = [model_degroot['id'], model_degroot['visual_default']]
+    tracer = [
+        dropdown_model[dropdown_model_default]['id'],
+        dropdown_model[dropdown_model_default]['visual_default']]
     return html.Div([
         html.Div([
             dbc.Modal(
@@ -336,11 +338,3 @@ def update_output_div(graph_json, n_clicks_modal,
             return json.loads(nx.jit_data(graph)), generateFigure(graph, model_name, dropdown_model, tracer), ''
     print(f'Could not trigger source: {ctx.triggered}')
     raise PreventUpdate
-
-def runProject():
-    app.run_server(debug=True)
-    print('Done')
-
-
-if __name__ == '__main__':
-    runProject()
