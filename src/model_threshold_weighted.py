@@ -27,10 +27,25 @@ action_thw_stochastic = 'action_thw_stochastic'
 action_thw_step = 'action_thw_step'
 action_thw_visual = 'action_thw_visual'
 
-def thw_update(args, data):
+def thw_update(data, args):
+    graph = data['graph']
+    thu_key, thu_th_key, thu_weight_key = model_thw['key'], 'thu_th', 'weight'
+    update_dict = {}
+    for srcNode, adjacency in graph.adjacency():
+        count, total = 0, len(adjacency)
+        for dstNode in adjacency.keys():
+            if graph.nodes[dstNode][thu_key] > 0.5:
+                count += 1
+        update_dict[srcNode] = 0 if count <= 0.5 * total else 1
+
+    # applies the update dictionary
+    for key, value in update_dict.items():
+        graph.nodes[key][thu_key] = value
     return data
 
 def thw_random(data, args):
+    for node, data_node in data['graph'].nodes(data=True):
+        data_node[model_thw['key']] = model_thw['state'].random()
     return data
 
 def thw_build_actions():
@@ -65,10 +80,6 @@ def thw_build_callbacks(app):
         print(f'THW callback: Could not find property with source: {source}')
         raise PreventUpdate()
 
-def threshold_weighted_tracer(graph, node_x, node_y):
-    """ Generates the uniform threshold tracer """
-    return generate_trace(graph, node_x, node_y, 'thw', 'Weighted Threshold', 'Bluered')
-
 def threshold_weighted_build(model_id):
     return html.Div(
         html.Div([
@@ -83,10 +94,23 @@ def threshold_weighted_build(model_id):
         style={'display': 'none'}
     )
 
+def threshold_weighted_tracer(graph, node_x, node_y):
+    """ Generates the uniform threshold tracer """
+    return generate_trace(graph, node_x, node_y, 'thw', 'Weighted Threshold', 'Bluered')
+
 tracer_weighted_threshold = {
     'id': 'tracer_threshold',
-    'name': 'Threshold Tracer',
+    'name': 'State Tracer',
     'tracer': threshold_weighted_tracer,
+}
+
+def thw_th_tracer(graph, node_x, node_y):
+    return generate_trace(graph, node_x, node_y, 'thw_th', 'Threshold', 'Bluered')
+
+tracer_thw_th = {
+    'id': 'tracer_thw_thw_th',
+    'name': 'Threshold Tracer',
+    'tracer': thw_th_tracer
 }
 
 model_thw = {
@@ -99,10 +123,13 @@ model_thw = {
     'callbacks': thw_build_callbacks,
     'state': DiscreteState([0, 1]),
     'update': threshold_weighted_tracer,
-    'visual_default': visual_connections['id'],
     'session-actions': 'session-actions-thw',
     'session-tracer': 'session-tracer-thw',
+    'visual_default': visual_connections['id'],
     'visuals': { model['id']: model for model in [
-        visual_connections, tracer_weighted_threshold
+        visual_connections, tracer_weighted_threshold, tracer_thw_th
     ]},
 }
+
+if __name__ == '__main__':
+    print('model: Threshold Weighted')

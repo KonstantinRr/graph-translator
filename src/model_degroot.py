@@ -46,7 +46,7 @@ def degroot_update(data, args):
 
 def degroot_random(data, args):
     for node, data_node in data['graph'].nodes(data=True):
-        data_node['deg'] = np.random.random()
+        data_node[model_degroot['key']] = model_degroot['state'].random()
     return data
 
 def degroot_build(model_id):
@@ -100,7 +100,7 @@ def degroot_tracer(graph, node_x, node_y):
 
 visual_degroot = {
     'id': 'tracer_degroot',
-    'name': 'DeGroot',
+    'name': 'State Tracer',
     'tracer': degroot_tracer,
 }
 
@@ -114,10 +114,13 @@ model_degroot = {
     'callbacks': build_degroot_callbacks,
     'state': ContinuesState(0.0, 1.0),
     'update': degroot_update,
-    'visual_default': visual_connections['id'],
     'session-actions': 'session-actions-degroot',
     'session-tracer': 'session-tracer-degroot',
+    'visual_default': visual_connections['id'],
     'visuals': { model['id']: model for model in [
         visual_connections, visual_degroot
     ]},
 }
+
+if __name__ == '__main__':
+    print('model: DeGroot')

@@ -7,7 +7,6 @@ import src.designs as designs
 
 def build_visual_selector(model, id):
     if len(model['visuals']) > 0:
-        print(model['visuals'])
         return [
             html.Div(
                 dcc.Dropdown(

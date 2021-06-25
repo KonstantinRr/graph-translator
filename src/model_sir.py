@@ -26,11 +26,13 @@ action_sir_step = 'action_sir_step'
 action_sir_visual = 'action_sir_visual'
 
 
-def sir_update(args, data):
+def sir_update(data, args):
     return data
 
 
 def sir_random(data, args):
+    for node, data_node in data['graph'].nodes(data=True):
+        data_node[model_sir['key']] = model_sir['state'].random()
     return data
 
 def sir_build_actions():
@@ -80,7 +82,7 @@ def sir_tracer(graph, node_x, node_y):
 
 visual_sir = {
     'id': 'tracer_sir',
-    'name': 'SIR',
+    'name': 'State Tracer',
     'tracer': sir_tracer,
 }
 
@@ -93,12 +95,15 @@ model_sir = {
     'key': 'sir',
     'actions': sir_build_actions(),
     'callbacks': sir_build_callbacks,
-    'state': DiscreteState([0, 2]),
+    'state': DiscreteState([0, 1, 2]),
     'update': sir_update,
-    'visual_default': visual_connections['id'],
     'session-actions': 'session-actions-sir',
     'session-tracer': 'session-tracer-sir',
+    'visual_default': visual_connections['id'],
     'visuals': { model['id']: model for model in [
         visual_connections, visual_sir
     ]},
 }
+
+if __name__ == '__main__':
+    print('model: SIR')

@@ -24,10 +24,12 @@ action_sis_random = 'action_sis_random'
 action_sis_step = 'action_sis_step'
 action_sis_visual = 'action_sis_visual'
 
-def sis_update(args, data):
+def sis_update(data, args):
     return data
 
 def sis_random(data, args):
+    for node, data_node in data['graph'].nodes(data=True):
+        data_node[model_sis['key']] = model_sis['state'].random()
     return data
 
 def sis_build_actions():
@@ -78,7 +80,7 @@ def sis_tracer(graph, node_x, node_y):
 
 visual_sis = {
     'id': 'tracer_sis',
-    'name': 'SIS',
+    'name': 'State Tracer',
     'tracer': sis_tracer,
 }
 
@@ -91,12 +93,15 @@ model_sis = {
     'key': 'sis',
     'actions': sis_build_actions(),
     'callbacks': sis_build_callbacks,
-    'state': DiscreteState([0, 2]),
+    'state': DiscreteState([0, 1]),
     'update': sis_update,
-    'visual_default': visual_connections['id'],
     'session-actions': 'session-actions-sis',
     'session-tracer': 'session-tracer-sis',
+    'visual_default': visual_connections['id'],
     'visuals': { model['id']: model for model in [
         visual_connections, visual_sis
     ]},
 }
+
+if __name__ == '__main__':
+    print('model: SIS')

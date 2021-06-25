@@ -1,5 +1,6 @@
 
 
+from networkx.readwrite.json_graph import adjacency
 import numpy as np
 import networkx as nx
 
@@ -20,15 +21,32 @@ from src.visual_connections import visual_connections
 id_thu_button_random = 'thu-button-random'
 id_thu_button_step = 'thu-button-step'
 id_thu_dropdown = 'thu-dropdown'
+id_thu_slider_threshold = 'thu-slider-threshold'
+id_thu_threshold_id = 'thu-slider-threshold-val'
 
 action_thu_random = 'action_thu_random'
 action_thu_step = 'action_thu_step'
 action_thu_visual = 'action_thu_visual'
 
-def thu_update(args, data):
+def thu_update(data, args):
+    graph = data['graph']
+    thu_key = model_thu['key']
+    update_dict = {}
+    for srcNode, adjacency in graph.adjacency():
+        count, total = 0, len(adjacency)
+        for dstNode in adjacency.keys():
+            if graph.nodes[dstNode][thu_key] > 0.5:
+                count += 1
+        update_dict[srcNode] = 0 if count <= 0.5 * total else 1
+
+    # applies the update dictionary
+    for key, value in update_dict.items():
+        graph.nodes[key][thu_key] = value
     return data
 
 def thu_random(data, args):
+    for node, data_node in data['graph'].nodes(data=True):
+        data_node[model_thu['key']] = model_thu['state'].random()
     return data
 
 def thu_build_actions():
@@ -43,6 +61,12 @@ def threshold_uniform_build_callbacks(app):
         dp.Input(id_thu_dropdown, 'value'))
     def tracer_callback(value):
         return [model_thu['id'], value]
+
+    @app.callback(
+        dp.Output(id_thu_threshold_id, 'children'),
+        dp.Input(id_thu_slider_threshold, 'value'))
+    def slider_update(value):
+        return f'Threshold: {value}'
 
     @app.callback(
         dp.Output(model_thu['session-actions'], 'data'),
@@ -64,6 +88,19 @@ def threshold_uniform_build(model_id):
         html.Div([
                 html.Div([html.Button('Random', id=id_thu_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_thu_button_step, style=designs.but)], style=designs.col),
+                html.Div(
+                    html.Div(
+                        [
+                            html.Div('Threshold', id=id_thu_threshold_id, style={'padding-left': '30px'}),
+                            dcc.Slider(
+                                id=id_thu_slider_threshold,
+                                min=0.0, max=1.0, step=0.1, value=0.5
+                            ),
+                        ],
+                        style={'width': '200px'}
+                    ),
+                    style=designs.col
+                )
             ] + build_visual_selector(model_thu, id=id_thu_dropdown),
             style=designs.row,
             id={'type': model_thu['id'], 'index': model_thu['id']}
@@ -78,7 +115,7 @@ def threshold_uniform_tracer(graph, node_x, node_y):
 
 visual_thu = {
     'id': 'tracer_thu',
-    'name': 'Threshold uniform',
+    'name': 'State Tracer',
     'tracer': threshold_uniform_tracer,
 }
 
@@ -93,10 +130,13 @@ model_thu = {
     'callbacks': threshold_uniform_build_callbacks,
     'state': DiscreteState([0, 1]),
     'update': thu_update,
-    'visual_default': visual_connections['id'],
     'session-actions': 'session-actions-thu',
     'session-tracer': 'session-tracer-thu',
+    'visual_default': visual_connections['id'],
     'visuals': { model['id']: model for model in [
         visual_connections, visual_thu
     ]},
 }
+
+if __name__ == '__main__':
+    print('model: Threshold Uniform')

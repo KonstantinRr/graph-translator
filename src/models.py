@@ -30,9 +30,8 @@ class ContinuesState:
         self.start = start
         self.end = end
 
-    def random(self, count=1):
-        return [random.random() * (self.end - self.start) + self.start
-            for _ in range(count)]
+    def random(self):
+        return random.random() * (self.end - self.start) + self.start
 
 def stochastic_callback(data, args):
     if isinstance(data['graph'], nx.Graph):
@@ -131,25 +130,6 @@ def convert(graph, thresholdKey, weightKey, valueKey):
                 outGraph.add_edge(counterNode, dst)
             edgeIdx += 1
     return outGraph        
-
-def _updateThresholdNode(node, adjacencies, threshold):
-    pass
-    #total = len(adjacencies)
-    #count = 0
-    #for adjacency in adjacencies.items():
-    #    if graph.nodes[node]['thw'] > 0.5:
-    #        count += 1
-    #return count <= threshold * total
-
-def updateThreshold(graph, threshold, steps=1):
-    state = np.array([node[1]['deg'] for node in graph.nodes(data=True)])
-    npMatrix = nx.to_numpy_matrix(graph, weight='weight')
-    
-def updateSocialChoice(graph, steps=1):
-    pass
-
-def updateConnections(graph, steps=1):
-    pass
 
 
 if __name__ == '__main__':

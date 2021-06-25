@@ -80,7 +80,6 @@ def generateFigure(graph, graphType, models, tracer):
     edge_text_trace.text = weights
 
     try:
-        print('TRACER', tracer)
         node_trace = models[tracer[0]]['visuals'][tracer[1]]['tracer'](graph, node_x, node_y)
     except KeyError:
         print(f'Unknown graph type {graphType} {tracer}')
