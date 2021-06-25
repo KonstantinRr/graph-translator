@@ -69,10 +69,12 @@ def addMinRequirements(graph):
         update(node, 'thw', 0.0)
         update(node, 'thw_th', 0.5)
 
+        update(node, 'tha', 0)
         update(node, 'deg', 0)
         update(node, 'sis', 0)
         update(node, 'sir', 0)
-        update(node, 'soc', 0)
+        update(node, 'upodmaj', 0)
+        update(node, 'upoduna', 0)
 
     for edge in graph.edges(data=True):
         if 'weight' not in edge[2]:

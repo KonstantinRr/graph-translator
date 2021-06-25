@@ -11,8 +11,12 @@ import src.tracer as tr
 from src.model_degroot import model_degroot
 from src.model_threshold import model_thu
 from src.model_threshold_weighted import model_thw
+from src.model_threshold_automata import model_tha
 from src.model_sis import model_sis
 from src.model_sir import model_sir
+from src.model_upod_maj import model_upodmaj
+from src.model_upod_una import model_upoduna
+
 
 __author__ = "Created by Konstantin Rolf | University of Groningen"
 __copyright__ = "Copyright 2021, Konstantin Rolf"
@@ -30,13 +34,10 @@ def update_empty(graph, steps=1):
     pass
 
 dropdown_model_default = model_degroot['id']
-dropdown_model = {
-    model_degroot['id']: model_degroot, 
-    model_thu['id']: model_thu,
-    model_thw['id']: model_thw,
-    model_sis['id']: model_sis,
-    model_sir['id']: model_sir,
-}
+dropdown_model = {model['id']: model for model in [
+    model_degroot, model_thu, model_thw, model_tha,
+    model_sis, model_sir, model_upodmaj, model_upoduna,
+]}
 
 def generateDefaultLayout(graph):
     return {nodeTuple[0]: nodeTuple[1]['pos']
