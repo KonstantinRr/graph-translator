@@ -1,4 +1,6 @@
 
+import random
+
 import numpy as np
 import networkx as nx
 
@@ -13,7 +15,8 @@ from src.tracer import generate_trace
 from src.models import DiscreteState
 import src.designs as designs
 
-from src.visual import build_visual_selector, build_step_callback, build_step_slider
+from src.visual import (build_infection_callback, build_infection_slider, build_visual_selector, build_step_callback, build_step_slider,
+    build_prob_slider, build_prob_callback)
 from src.visual_connections import visual_connections
 
 id_sis_button_random = 'sis-button-random'
@@ -21,18 +24,42 @@ id_sis_button_step = 'sis-button-step'
 id_sis_dropdown = 'sis-dropdown'
 id_sis_slider_steps = 'sis-slider-steps'
 id_sis_slider_steps_value = 'sis-slider-steps-value'
+id_sis_slider_prob = 'sis-slider-prob'
+id_sis_slider_prob_value = 'sis-slider-prob-value'
+id_sis_slider_itime = 'sis-slider-itime'
+id_sis_slider_itime_value = 'sis-slider-itime-value'
 
 action_sis_random = 'action_sis_random'
 action_sis_step = 'action_sis_step'
 action_sis_visual = 'action_sis_visual'
 
 def sis_update(data, args):
-    return data
+    graph = data['graph']
+    sir_key = model_sis['key']
 
+    for i in range(args['steps']):
+        update_dict = {}
+        for srcNode, adjacency in graph.adjacency():
+            state = graph.nodes[srcNode][sir_key]
+            if state == 0: # node is suspectible
+                count = 0
+                for dstNode in adjacency.keys():
+                    if graph.nodes[dstNode][sir_key] >= 1:
+                        count += 1 # neighbour node is infected
+                # 1 minus healthy prob
+                infection_prob = 1.0 - (1.0 - args['prob']) ** count
+                if np.random.random() <= infection_prob:
+                    update_dict[srcNode] = args['itime']
+            elif state > 0: # node is infected
+                update_dict[srcNode] = state - 1 # less infected
+
+        # applies the update dictionary
+        for key, value in update_dict.items():
+            graph.nodes[key][sir_key] = value
+    return data
 def sis_random(data, args):
-    state = DiscreteState([0, 1])
     for node, data_node in data['graph'].nodes(data=True):
-        data_node[model_sis['key']] = state.random()
+        data_node[model_sis['key']] = random.choice([0, args['itime']])
     return data
 
 def sis_build_actions():
@@ -43,6 +70,8 @@ def sis_build_actions():
 
 def sis_build_callbacks(app):
     build_step_callback(app, id_sis_slider_steps_value, id_sis_slider_steps, 'Steps')
+    build_prob_callback(app, id_sis_slider_prob_value, id_sis_slider_prob)
+    build_infection_callback(app, id_sis_slider_itime_value, id_sis_slider_itime)
 
     @app.callback(
         dp.Output(model_sis['session-tracer'], 'data'),
@@ -54,12 +83,14 @@ def sis_build_callbacks(app):
         dp.Output(model_sis['session-actions'], 'data'),
         dp.Input(id_sis_button_random, 'n_clicks'),
         dp.Input(id_sis_button_step, 'n_clicks'),
-        dp.State(id_sis_slider_steps, 'value'))
-    def callback(n1, n2, steps):
+        dp.State(id_sis_slider_steps, 'value'),
+        dp.State(id_sis_slider_prob, 'value'),
+        dp.State(id_sis_slider_itime, 'value'),)
+    def callback(n1, n2, steps, prob, itime):
         ctx = dash.callback_context
         if not ctx.triggered: return []
         source = ctx.triggered[0]['prop_id'].split('.')[0]
-        args = {'steps': steps}
+        args = {'steps': steps, 'prob': prob, 'itime': itime}
         if source == id_sis_button_random:
             return [(model_sis['id'], action_sis_random, args)]
         elif source == id_sis_button_step:
@@ -74,7 +105,11 @@ def sis_build(model_id):
                 html.Div([html.Button('Random', id=id_sis_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_sis_button_step, style=designs.but)], style=designs.col),
                 html.Div([build_step_slider(
-                    id_sis_slider_steps_value, id_sis_slider_steps, 'Steps')], style=designs.col)
+                    id_sis_slider_steps_value, id_sis_slider_steps, 'Steps')], style=designs.col),
+                html.Div([build_prob_slider(
+                    id_sis_slider_prob_value, id_sis_slider_prob)], style=designs.col),
+                html.Div([build_infection_slider(
+                    id_sis_slider_itime_value, id_sis_slider_itime)], style=designs.col),
             ] + build_visual_selector(model_sis, id=id_sis_dropdown),
             style=designs.row,
             id={'type': model_sis['id'], 'index': model_sis['id']}

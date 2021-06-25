@@ -31,18 +31,19 @@ action_thw_visual = 'action_thw_visual'
 
 def thw_update(data, args):
     graph = data['graph']
-    thu_key, thu_th_key, thu_weight_key = model_thw['key'], 'thu_th', 'weight'
-    update_dict = {}
-    for srcNode, adjacency in graph.adjacency():
-        count, total = 0, len(adjacency)
-        for dstNode in adjacency.keys():
-            if graph.nodes[dstNode][thu_key] > 0.5:
-                count += 1
-        update_dict[srcNode] = 0 if count <= 0.5 * total else 1
+    thw_key, thw_th_key, thw_weight_key = model_thw['key'], 'thu_th', 'weight'
+    for i in range(args['steps']):
+        update_dict = {}
+        for srcNode, adjacency in graph.adjacency():
+            count = 0.0
+            for dstNode, edge in adjacency.items():
+                if graph.nodes[dstNode][thw_key] > 0.5:
+                    count += edge['weight']
+            update_dict[srcNode] = 0 if count <= srcNode[thw_th_key] else 1
 
-    # applies the update dictionary
-    for key, value in update_dict.items():
-        graph.nodes[key][thu_key] = value
+        # applies the update dictionary
+        for key, value in update_dict.items():
+            graph.nodes[key][thw_key] = value
     return data
 
 def thw_random(data, args):
