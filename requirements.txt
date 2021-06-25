@@ -3,6 +3,7 @@ flask
 dash
 pandas
 numpy
+networkx
 dash-html-components
 dash-core-components
 dash-bootstrap-components
