@@ -39,6 +39,7 @@ def generateFigure(graph, graphType, models, tracer):
     edge_cx, edge_cy = [], []
     weights = []
     directed = isinstance(graph, nx.DiGraph)
+    node_ids = list(graph.nodes())
     if directed:
         for edge in graph.edges(data=True):
             start = findNodePos(graph.nodes[edge[0]])
@@ -73,7 +74,7 @@ def generateFigure(graph, graphType, models, tracer):
     )
 
     try:
-        node_trace = models[tracer[0]]['visuals'][tracer[1]]['tracer'](graph, node_x, node_y)
+        node_trace = models[tracer[0]]['visuals'][tracer[1]]['tracer'](graph, node_x, node_y, node_ids)
     except KeyError:
         print(f'Unknown graph type {graphType} {tracer}')
         node_trace = connection_tracer(graph, node_x, node_y)
@@ -108,11 +109,13 @@ def generateFigure(graph, graphType, models, tracer):
             yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
         )
     )
+    fig.update_layout(clickmode='event+select')
     return fig
 
-def generate_trace(graph, node_x, node_y, key, title, color):
+def generate_trace(graph, node_x, node_y, node_ids, key, title, color):
     node_trace = go.Scatter(
         x=node_x, y=node_y,
+        customdata=node_ids,
         mode='markers',
         hoverinfo='text',
         marker=dict(
@@ -133,13 +136,14 @@ def generate_trace(graph, node_x, node_y, key, title, color):
 
     node_trace.marker.color = [node[1][key] for node in graph.nodes(data=True)]
     node_trace.text = [str(node[1][key]) for node in graph.nodes(data=True)]
+    node_trace.graph_ids = [node for node in graph.nodes()]
     return node_trace
 
-def generateSocialChoiceTracer(graph, node_x, node_y):
+def generateSocialChoiceTracer(graph, node_x, node_y, node_ids):
     """ Generates the social choice tracer """
     return generate_trace(graph, node_x, node_y, 'soc', 'Social Choice', 'Bluered')
 
-def generateSIRTracer(graph, node_x, node_y):
+def generateSIRTracer(graph, node_x, node_y, node_ids):
     """ Generates the SIR tracer """
     return generate_trace(graph, node_x, node_y, 'sir', 'SIR', 'Bluered')
 

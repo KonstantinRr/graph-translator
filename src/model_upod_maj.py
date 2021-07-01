@@ -125,9 +125,9 @@ def upodmaj_build(model_id):
         style={'display': 'none'}
     )
 
-def upodmaj_state_tracer(graph, node_x, node_y):
+def upodmaj_state_tracer(graph, node_x, node_y, node_ids):
     """ Generates the uniform threshold tracer """
-    return generate_trace(graph, node_x, node_y, model_upodmaj['key'], 'UPOD Majority State', 'Bluered')
+    return generate_trace(graph, node_x, node_y, node_ids, model_upodmaj['key'], 'UPOD Majority State', 'Bluered')
 
 tracer_upodmaj = {
     'id': 'tracer_upodmaj',

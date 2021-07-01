@@ -124,9 +124,9 @@ def threshold_uniform_build(model_id):
         style={'display': 'none'}
     )
 
-def threshold_uniform_tracer(graph, node_x, node_y):
+def threshold_uniform_tracer(graph, node_x, node_y, node_ids):
     """ Generates the uniform threshold tracer """
-    return generate_trace(graph, node_x, node_y, 'thu', 'Uniform Threshold', 'Bluered')
+    return generate_trace(graph, node_x, node_y, node_ids, 'thu', 'Uniform Threshold', 'Bluered')
 
 visual_thu = {
     'id': 'tracer_thu',

@@ -29,6 +29,46 @@ action_tha_visual = 'action_tha_visual'
 
 def tha_update(data, args):
     graph = data['graph']
+    tha_key = model_tha['key']
+
+    for i in range(args['steps']):
+        update_dict = {}
+        for srcNode, adjacency in graph.adjacency():
+            # counts 
+            countP, countN, total = 0, 0, len(adjacency)
+            if total == 0: 
+                continue # lonely persons never change
+
+            for dstNode in adjacency.keys():
+                if graph.nodes[dstNode][tha_key] > 0.5:
+                    countP += 1
+                elif graph.nodes[dstNode][tha_key] < -0.5:
+                    countN -= 1
+
+            sP, sNP = countP == total, countN == total
+            wP = countP > 0 and countN == 0
+            wNP = countN > 0 and countP == 0
+
+            state = graph.nodes[srcNode][tha_key]
+            if state > 0: # P
+                if wNP and not sNP:
+                    update_dict[srcNode] = 0
+                if sNP:
+                    update_dict[srcNode] = -1
+            elif state < 0: # NP
+                if wP and not sP:
+                    update_dict[srcNode] = 0
+                if sP:
+                    update_dict[srcNode] = 1
+            elif state == 0: # UP
+                if sP:
+                    update_dict[srcNode] = 1
+                if sNP:
+                    update_dict[srcNode] = -1
+            
+        # applies the update dictionary
+        for key, value in update_dict.items():
+            graph.nodes[key][tha_key] = value
     return data
 
 def tha_random(data, args):
@@ -84,9 +124,9 @@ def tha_build(model_id):
         style={'display': 'none'}
     )
 
-def tha_tracer(graph, node_x, node_y):
+def tha_tracer(graph, node_x, node_y, node_ids):
     """ Generates the uniform threshold tracer """
-    return generate_trace(graph, node_x, node_y, model_tha['key'], 'Threshold Automata', 'Bluered')
+    return generate_trace(graph, node_x, node_y, node_ids, model_tha['key'], 'Threshold Automata', 'Bluered')
 
 tracer_tha_state = {
     'id': 'tracer_threshold_automata',

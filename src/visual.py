@@ -1,10 +1,12 @@
 
-
+import dash
 import dash.dependencies as dp
 import dash_html_components as html
 import dash_core_components as dcc
+import dash_bootstrap_components as dbc
 
 import src.designs as designs
+
 
 def build_step_callback(app, id_value, id_slider, text):
     @app.callback(

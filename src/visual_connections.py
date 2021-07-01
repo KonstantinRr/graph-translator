@@ -2,9 +2,10 @@ import dash_html_components as html
 
 import plotly.graph_objects as go
 
-def connection_tracer(graph, node_x, node_y):
+def connection_tracer(graph, node_x, node_y, node_ids):
     node_trace = go.Scatter(
         x=node_x, y=node_y,
+        customdata=node_ids,
         mode='markers',
         hoverinfo='text',
         marker=dict(

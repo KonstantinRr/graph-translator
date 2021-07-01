@@ -1,4 +1,5 @@
 
+from math import gcd
 
 import numpy as np
 import networkx as nx
@@ -11,7 +12,7 @@ import dash_html_components as html
 from dash.exceptions import PreventUpdate
 
 from src.tracer import generate_trace
-from src.models import DiscreteState, stochastic_callback
+from src.models import DiscreteState, stochastic_callback, addMinRequirements
 import src.designs as designs
 
 from src.visual import build_visual_selector, build_step_slider, build_step_callback
@@ -20,6 +21,8 @@ from src.visual_connections import visual_connections
 id_thw_button_random = 'thw-button-random'
 id_thw_button_step = 'thw-button-step'
 id_thw_button_stochastic = 'thw-button-stochastic'
+id_thw_button_convert = 'thw-button-convert'
+
 id_thw_dropdown = 'thw-dropdown'
 id_thw_slider_steps = 'thw-slider-steps'
 id_thw_slider_steps_value = 'thw-slider-steps-value'
@@ -27,6 +30,7 @@ id_thw_slider_steps_value = 'thw-slider-steps-value'
 action_thw_random = 'action_thw_random'
 action_thw_stochastic = 'action_thw_stochastic'
 action_thw_step = 'action_thw_step'
+action_thw_convert = 'action_thw_step'
 action_thw_visual = 'action_thw_visual'
 
 def thw_update(data, args):
@@ -46,6 +50,65 @@ def thw_update(data, args):
             graph.nodes[key][thw_key] = value
     return data
 
+def thw_convert(data, args):
+    new_graph = convert(data['graph'],
+        'thu_th', 'weight', model_thw['key'])
+    data['graph'] = addMinRequirements(new_graph)
+    return data
+
+def convert(graph, thresholdKey, weightKey, valueKey):
+    outGraph = nx.empty_graph()
+
+    base = 10 ** 3
+    edgeIdx, nodeIdx = 0, 0
+
+    for nd, data in graph.nodes(data=True):
+        # adds the node with the data key
+        outGraph.add_nodes_from([(nd, {valueKey: data[valueKey]})])
+
+    for src, adjacency in graph.adjacency():
+        # gets an integer representation of the threshold
+        threshold = int(graph.nodes[src][thresholdKey] * base)
+
+        # calculates the LCM of the threshold and all the outgoing edges
+        lcm = threshold
+        for dst, edgeData in adjacency.items(): # all adjacent nodes
+            weight = int(edgeData[weightKey] * base)
+            lcm = lcm * weight // gcd(lcm, weight)
+
+        for dst, edgeData in adjacency.items(): # all adjacent nodes
+            # calculates the weight in digit count
+            weight = int(edgeData[weightKey] * base)
+
+            # adds the node constructs
+            for i in range(lcm // weight):
+                t1, t2, b = f'f_{edgeIdx}_{i}_0', f'f_{edgeIdx}_{i}_1', f'b_{edgeIdx}_{i}'
+                outGraph.add_nodes_from([
+                    (t1, {valueKey: 0}),
+                    (t2, {valueKey: 0}),
+                    (b, {valueKey: 0}),
+                ])
+                # adds the connecting 
+                outGraph.add_edges_from([
+                    (t1, src), (t2, src),
+                    (b, t1), (b, t2),
+                    (dst, b)
+                ])
+
+            # adds the counter nodes to the source
+            for i in range(2 * (lcm // weight)):
+                counterNode = f'c_{edgeIdx}_{i}'
+                outGraph.add_nodes_from([(counterNode, {valueKey: 1})])
+                outGraph.add_edge(counterNode, src)
+
+            # adds the threshold nodes to the destination
+            for i in range(lcm // threshold):
+                counterNode = f't_{edgeIdx}_{i}'
+                outGraph.add_nodes_from([(counterNode, {valueKey: 0})])
+                outGraph.add_edge(counterNode, dst)
+            edgeIdx += 1
+    return outGraph        
+
 def thw_random(data, args):
     state = DiscreteState([0, 1])
     for node, data_node in data['graph'].nodes(data=True):
@@ -57,6 +120,7 @@ def thw_build_actions():
         action_thw_random: thw_random, 
         action_thw_step: thw_update,
         action_thw_stochastic: stochastic_callback,
+        action_thw_convert: thw_convert,
     }
 
 def thw_build_callbacks(app):
@@ -73,8 +137,9 @@ def thw_build_callbacks(app):
         dp.Input(id_thw_button_random, 'n_clicks'),
         dp.Input(id_thw_button_stochastic, 'n_clicks'),
         dp.Input(id_thw_button_step, 'n_clicks'),
+        dp.Input(id_thw_button_convert, 'n_clicks'),
         dp.State(id_thw_slider_steps, 'value'))
-    def callback(n1, n2, n3, steps):
+    def callback(n1, n2, n3, n4, steps):
         ctx = dash.callback_context
         if not ctx.triggered: return []
         source = ctx.triggered[0]['prop_id'].split('.')[0]
@@ -85,6 +150,8 @@ def thw_build_callbacks(app):
             return [(model_thw['id'], action_thw_stochastic, args)]
         elif source == id_thw_button_step:
             return [(model_thw['id'], action_thw_step, args)]
+        elif source == id_thw_button_convert:
+            return [(model_thw['id'], action_thw_convert, args)]
         print(f'THW callback: Could not find property with source: {source}')
         raise PreventUpdate()
 
@@ -94,6 +161,7 @@ def threshold_weighted_build(model_id):
                 html.Div([html.Button('Random', id=id_thw_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Stochastic', id=id_thw_button_stochastic, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_thw_button_step, style=designs.but)], style=designs.col),
+                html.Div([html.Button('Convert', id=id_thw_button_convert, style=designs.but)], style=designs.col),
                 html.Div([build_step_slider(
                     id_thw_slider_steps_value, id_thw_slider_steps, 'Steps')], style=designs.col)
             ] + build_visual_selector(model_thw, id=id_thw_dropdown),
@@ -114,8 +182,8 @@ tracer_weighted_threshold = {
     'tracer': threshold_weighted_tracer,
 }
 
-def thw_th_tracer(graph, node_x, node_y):
-    return generate_trace(graph, node_x, node_y, 'thw_th', 'Threshold', 'Bluered')
+def thw_th_tracer(graph, node_x, node_y, node_ids):
+    return generate_trace(graph, node_x, node_y, node_ids, 'thw_th', 'Threshold', 'Bluered')
 
 tracer_thw_th = {
     'id': 'tracer_thw_thw_th',

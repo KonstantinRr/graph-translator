@@ -29,9 +29,10 @@ action_degroot_step = 'action_degroot_step'
 action_degroot_visual = 'action_degroot_visual'
 
 def degroot_update(data, args):
-    transpose = True
+    transpose, clip = False, False
     graph = data['graph']
 
+    key = model_degroot['key']
     # create the matrix version of the graph
     npMatrix = nx.to_numpy_matrix(graph, weight='weight')
     if transpose:
@@ -39,13 +40,14 @@ def degroot_update(data, args):
     # calculates the number of steps 
     convMatrix = np.linalg.matrix_power(npMatrix, args['steps'])
     # gets the current state as numpy vector
-    state = np.array([node[1]['deg'] for node in graph.nodes(data=True)])
+    state = np.array([node[1][key] for node in graph.nodes(data=True)])
     # calculates the new state by multiplying with the matrix
     newState = np.asarray(np.dot(convMatrix, state)).reshape(-1)
-    newState = np.clip(newState, 0.0, 1.0)
+    if clip:
+        newState = np.clip(newState, 0.0, 1.0)
     # apply the new state to the model
     for val, node in zip(newState, graph.nodes(data=True)):
-        node[1]['deg'] = val
+        node[1][key] = val
     return data
 
 def degroot_random(data, args):
@@ -105,8 +107,8 @@ def build_degroot_callbacks(app):
         print(f'DeGroot callback: Could not find property with source: {source}')
         raise PreventUpdate()
 
-def degroot_tracer(graph, node_x, node_y):
-    return generate_trace(graph, node_x, node_y, 'deg', 'DeGroot', 'YlGnBu')
+def degroot_tracer(graph, node_x, node_y, node_ids):
+    return generate_trace(graph, node_x, node_y, node_ids, 'deg', 'DeGroot', 'YlGnBu')
 
 visual_degroot = {
     'id': 'tracer_degroot',

@@ -234,7 +234,7 @@ graph_gens = {
         'argvals': (3, 3),
         'gen': lambda n, r: nx.turan_graph(n, r),
         'description_fn': 'turan_graph(n, r)',
-        'description': 'Return the Turan Graph',
+        'description': 'Return the Turan Graph.',
     },
     'wheel_graph': {
         'name': 'Wheel Graph',
@@ -243,7 +243,7 @@ graph_gens = {
         'argvals': (3,),
         'gen': lambda n: nx.wheel_graph(n),
         'description_fn': 'wheel_graph(n)',
-        'description': 'Return the wheel graph',
+        'description': 'Return the wheel graph.',
     },
     'random_geometric': {
         'name': 'Random Geometric',
@@ -254,24 +254,24 @@ graph_gens = {
         'description_fn': 'random_geometric_graph(n, c)',
         'description': 'Returns a random geometric graph in the unit cube of dimensions dim.',
     },
-    'margulis_gabber_galil_graph': {
-        'name': 'Margulis Gabber Galil Graph',
-        'args': ('n',),
-        'argtypes': (int,),
-        'argvals': (3,),
-        'gen': lambda n: nx.margulis_gabber_galil_graph(n),
-        'description_fn': 'margulis_gabber_galil_graph(n)',
-        'description': 'Returns the Margulis-Gabber-Galil undirected MultiGraph on n^2 nodes.'
-    },
-    'chordal_cycle_graph': {
-        'name': 'Chordal Cycle Graph',
-        'args': ('p',),
-        'argtypes': (int,),
-        'argvals': (3,),
-        'gen': lambda p:  nx.chordal_cycle_graph(p),
-        'description_fn': 'chordal_cycle_graph(p)',
-        'description': 'Returns the chordal cycle graph on p nodes.',
-    },
+    #'margulis_gabber_galil_graph': {
+    #    'name': 'Margulis Gabber Galil Graph',
+    #    'args': ('n',),
+    #    'argtypes': (int,),
+    #    'argvals': (3,),
+    #    'gen': lambda n: nx.margulis_gabber_galil_graph(n),
+    #    'description_fn': 'margulis_gabber_galil_graph(n)',
+    #    'description': 'Returns the Margulis-Gabber-Galil undirected MultiGraph on n^2 nodes.'
+    #},
+    #'chordal_cycle_graph': {
+    #    'name': 'Chordal Cycle Graph',
+    #    'args': ('p',),
+    #    'argtypes': (int,),
+    #    'argvals': (3,),
+    #    'gen': lambda p:  nx.chordal_cycle_graph(p),
+    #    'description_fn': 'chordal_cycle_graph(p)',
+    #    'description': 'Returns the chordal cycle graph on p nodes.',
+    #},
     'paley_graph': {
         'name': 'Paley Graph',
         'args': ('p',),

@@ -125,9 +125,9 @@ def upoduna_build(model_id):
         style={'display': 'none'}
     )
 
-def upoduna_state_tracer(graph, node_x, node_y):
+def upoduna_state_tracer(graph, node_x, node_y, node_ids):
     """ Generates the uniform threshold tracer """
-    return generate_trace(graph, node_x, node_y, model_upoduna['key'], 'UPOD Unanimity State', 'Bluered')
+    return generate_trace(graph, node_x, node_y, node_ids, model_upoduna['key'], 'UPOD Unanimity State', 'Bluered')
 
 tracer_upoduna = {
     'id': 'tracer_upoduna',
