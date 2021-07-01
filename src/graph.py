@@ -3,8 +3,6 @@
 """ Graph file """
 
 import uuid
-import string
-import random
 import json
 import re
 import itertools
@@ -21,6 +19,7 @@ from dash.exceptions import PreventUpdate
 from networkx.exception import NetworkXError
 
 import src.designs as designs
+from src.interaction import *
 from src.tracer import *
 from src.models import *
 from src.info import *
@@ -290,20 +289,6 @@ app = dash.Dash(external_stylesheets=external_stylesheets)
 app.config.suppress_callback_exceptions = True
 app.layout = serveLayout
 
-def randAlphaNumeric(length=8):
-    return ''.join(random.choice(
-        string.ascii_uppercase + string.ascii_lowercase + string.digits
-    ) for _ in range(length))
-
-def randName(graph):
-    nodeName = randAlphaNumeric(8)
-    while nodeName in graph:
-        nodeName = randAlphaNumeric(8)
-    return nodeName
-
-def get_node_names(selected):
-    if selected is None: return []
-    return [qq['customdata'] for qq in selected['points']]
 
 def action_add(data, args):
     graph = data['graph']
@@ -448,15 +433,14 @@ def session_tracer_unify(dropdown, *args):
     dp.Input('action-add', 'n_clicks'),
     dp.Input('action-connect', 'n_clicks'),
     dp.Input('action-deconnect', 'n_clicks'),
-    dp.State('model-input-textarea', 'value'),
-    dp.State('basic-graph', 'selectedData'))
-def modal_input_generate(n1, n2, n3, n4, n5, text, selected):
+    dp.State('model-input-textarea', 'value'))
+def modal_input_generate(n1, n2, n3, n4, n5, text):
     ctx = dash.callback_context
     if not ctx.triggered:
         return []
 
     source = ctx.triggered[0]['prop_id'].split('.')[0]
-    args = {'text': text, 'selected': selected}
+    args = {'text': text}
     if source == 'modal-input-generate':
         return [('session-graph-actions', 'input', args)]
     elif source == 'action-delete':
@@ -495,9 +479,12 @@ def make_input_visible(update, old):
     dp.Input('session-tracer', 'data'),
 ],
     dp.State({'type': 'modal-gen-input', 'index': dp.ALL}, 'value'),
+    dp.State('basic-graph', 'selectedData'),
+    dp.State('basic-graph', 'clickData'),
+    dp.State('basic-graph', 'hoverData'),
 )
 def update_output_div(graph_json, n_clicks_modal,
-    layout_name, model_name, graphGenType, actions, tracer, graphGenInput):
+    layout_name, model_name, graphGenType, actions, tracer, graphGenInput, selected, clickData, hoverData):
     ctx = dash.callback_context
     if not ctx.triggered:
         graph = nx.jit_graph(graph_json)
@@ -522,6 +509,12 @@ def update_output_div(graph_json, n_clicks_modal,
             if executor is not None:
                 function = executor.get(action[1])
                 if function is not None:
+                    args = action[2] if len(action) > 2 else {}
+                    args['selected'] = selected
+                    args['hover'] = hoverData
+                    args['click'] = clickData
+
+
                     graph = nx.jit_graph(graph_json)
                     newData = function({'graph': graph},
                         action[2] if len(action) > 2 else [])

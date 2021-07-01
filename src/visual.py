@@ -7,6 +7,52 @@ import dash_bootstrap_components as dbc
 
 import src.designs as designs
 
+def build_init_modal(id_modal, slider_id, generate_id, text, min, max, step, value):
+    return dbc.Modal(
+        [
+            dbc.ModalHeader('Initialize'),
+            dbc.ModalBody([
+                html.Div(
+                    [
+                        html.Div(text, id=f'{slider_id}-value', style={'padding-left': '30px'}),
+                        dcc.Slider(
+                            id=slider_id,
+                            min=min, max=max,
+                            step=step, value=value
+                        ),
+                    ],
+                    style={'width': '200px'}
+                )
+            ]),
+            dbc.ModalFooter([
+                dbc.Button('Close', id=f'modal-{id_modal}-close', className='ml-auto', style={'width': '10em'}),
+                dbc.Button('Generate', id=generate_id, className='ml-auto', style={'width': '10em'})
+            ], style={'margin-left': 'auto', 'margin-right': '0'}),
+        ],
+        id=f'modal-{id_modal}'
+    )
+
+def build_init_button(id_modal):
+    return html.Div([html.Button(
+        'Init', id=f'modal-{id_modal}-open', style=designs.but)], style=designs.col)
+
+def build_init_callback(app, id_modal, slider_id, text):
+    @app.callback(
+        dp.Output(f'{slider_id}-value', 'children'),
+        dp.Input(f'{slider_id}', 'value'))
+    def slider_update(value):
+        return f'{text} {value}'
+
+    @app.callback(
+        dp.Output(f'modal-{id_modal}', 'is_open'),
+        dp.Input(f'modal-{id_modal}-open', 'n_clicks'),
+        dp.Input(f'modal-{id_modal}-close', 'n_clicks'),
+        dp.State(f'modal-{id_modal}', 'is_open'))
+    def toggle_modal_init(n1, n2, is_open):
+        if n1 or n2:
+            return not is_open
+        return is_open
+
 
 def build_step_callback(app, id_value, id_slider, text):
     @app.callback(

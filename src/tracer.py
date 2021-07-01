@@ -136,7 +136,6 @@ def generate_trace(graph, node_x, node_y, node_ids, key, title, color):
 
     node_trace.marker.color = [node[1][key] for node in graph.nodes(data=True)]
     node_trace.text = [str(node[1][key]) for node in graph.nodes(data=True)]
-    node_trace.graph_ids = [node for node in graph.nodes()]
     return node_trace
 
 def generateSocialChoiceTracer(graph, node_x, node_y, node_ids):
