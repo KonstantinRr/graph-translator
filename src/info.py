@@ -35,7 +35,7 @@ def update_empty(graph, steps=1):
 
 dropdown_model_default = model_thu['id']
 dropdown_model = {model['id']: model for model in [
-    model_degroot, model_thu, model_thw, model_tha,
+    model_thu, model_degroot, model_thw, model_tha,
     model_sis, model_sir, model_upodmaj, model_upoduna,
 ]}
 

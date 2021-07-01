@@ -118,6 +118,7 @@ def upoduna_build(model_id):
                     id_upoduna_modal_generate, model_upoduna['name'],
                     0, 10, 1, 0
                 ),
+                build_init_button(id_upoduna_modal),
                 html.Div([html.Button('Random', id=id_upoduna_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_upoduna_button_step, style=designs.but)], style=designs.col),
                 html.Div([build_step_slider(
