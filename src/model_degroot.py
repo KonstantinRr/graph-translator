@@ -11,7 +11,7 @@ from dash.exceptions import PreventUpdate
 
 from src.interaction import *
 from src.tracer import generate_trace
-from src.models import ContinuesState, stochastic_callback
+from src.models import ContinuesState, stochastic_callback, init_value
 import src.designs as designs
 
 from src.visual import *
@@ -61,22 +61,16 @@ def degroot_random(data, args):
         data_node[model_degroot['key']] = state.random()
     return data
 
-def degroot_init(data, args):
-    graph, key = data['graph'], model_degroot['key']
-    for node in get_node_names(args['selected']):
-        graph.nodes[node][key] = args['init']
-    return data
-
 def degroot_build(model_id):
     return html.Div(
         html.Div([
                 build_init_modal(
                     id_degroot_modal, id_degroot_modal_init_slider,
-                    id_degroot_modal_generate, 'DeGroot',
+                    id_degroot_modal_generate, model_degroot['name'],
                     0.0, 1.0, 0.05, 0.0
                 ),
-                html.Div([html.Button('Random', id=id_degroot_button_random, style=designs.but)], style=designs.col),
                 build_init_button(id_degroot_modal),
+                html.Div([html.Button('Random', id=id_degroot_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Stochastic', id=id_degroot_button_stochastic, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_degroot_button_step, style=designs.but)], style=designs.col),
                 html.Div([build_step_slider(
@@ -94,12 +88,12 @@ def degroot_build_actions():
         action_degroot_random: degroot_random, 
         action_degroot_stochastic: stochastic_callback,
         action_degroot_step: degroot_update,
-        action_degroot_init: degroot_init,
+        action_degroot_init: lambda data, args: init_value(data, args, model_degroot['key']),
     }
 
 def build_degroot_callbacks(app):
     build_step_callback(app, id_degroot_slider_steps_value, id_degroot_slider_steps, 'Steps')
-    build_init_callback(app, id_degroot_modal, id_degroot_modal_init_slider, 'DeGroot')
+    build_init_callback(app, id_degroot_modal, id_degroot_modal_init_slider, model_degroot['name'])
 
     @app.callback(
         dp.Output('session-tracer-degroot', 'data'),
@@ -120,19 +114,20 @@ def build_degroot_callbacks(app):
         if not ctx.triggered: return []
         source = ctx.triggered[0]['prop_id'].split('.')[0]
         args = {'steps': steps, 'init': init}
-        if source == id_degroot_button_random:
-            return [(model_degroot['id'], action_degroot_random, args)]
-        elif source == id_degroot_button_stochastic:
-            return [(model_degroot['id'], action_degroot_stochastic, args)]
-        elif source == id_degroot_button_step:
-            return [(model_degroot['id'], action_degroot_step, args)]
-        elif source == id_degroot_modal_generate:
-            return [(model_degroot['id'], action_degroot_init, args)] 
+        ac = {
+            id_degroot_button_random: action_degroot_random,
+            id_degroot_button_stochastic: action_degroot_stochastic,
+            id_degroot_button_step: action_degroot_step,
+            id_degroot_modal_generate: action_degroot_init
+        }
+        if source in ac:
+            return [(model_degroot['id'], ac[source], args)]
         print(f'DeGroot callback: Could not find property with source: {source}')
         raise PreventUpdate()
 
 def degroot_tracer(graph, node_x, node_y, node_ids):
-    return generate_trace(graph, node_x, node_y, node_ids, model_degroot['key'], 'DeGroot', 'YlGnBu')
+    return generate_trace(graph, node_x, node_y, node_ids,
+        model_degroot['key'], model_degroot['name'], 'YlGnBu')
 
 visual_degroot = {
     'id': 'tracer_degroot',
@@ -152,7 +147,7 @@ model_degroot = {
     'update': degroot_update,
     'session-actions': 'session-actions-degroot',
     'session-tracer': 'session-tracer-degroot',
-    'visual_default': visual_connections['id'],
+    'visual_default': visual_degroot['id'],
     'visuals': { model['id']: model for model in [
         visual_connections, visual_degroot
     ]},

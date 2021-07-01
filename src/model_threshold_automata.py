@@ -10,11 +10,12 @@ import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.exceptions import PreventUpdate
 
+from src.interaction import *
 from src.tracer import generate_trace
-from src.models import DiscreteState
+from src.models import DiscreteState, init_value
 import src.designs as designs
 
-from src.visual import build_visual_selector, build_step_callback, build_step_slider
+from src.visual import *
 from src.visual_connections import visual_connections
 
 id_tha_button_random = 'tha-button-random'
@@ -22,10 +23,14 @@ id_tha_button_step = 'tha-button-step'
 id_tha_dropdown = 'tha-dropdown'
 id_tha_slider_steps = 'tha-slider-steps'
 id_tha_slider_steps_value = 'tha-slider-steps-value'
+id_tha_modal = 'tha-init'
+id_tha_modal_generate = 'tha-init-generate'
+id_tha_modal_init_slider = 'tha-init-slider'
 
 action_tha_random = 'action_tha_random'
 action_tha_step = 'action_tha_step'
 action_tha_visual = 'action_tha_visual'
+action_tha_init = 'action_tha_init'
 
 def tha_update(data, args):
     graph = data['graph']
@@ -81,10 +86,12 @@ def tha_build_actions():
     return {
         action_tha_random: tha_random, 
         action_tha_step: tha_update,
+        action_tha_init: lambda data, args: init_value(data, args, model_tha['key']),
     }
 
 def tha_build_callbacks(app):
     build_step_callback(app, id_tha_slider_steps_value, id_tha_slider_steps, 'Steps')
+    build_init_callback(app, id_tha_modal, id_tha_modal_init_slider, 'Threshold Automata')
 
     @app.callback(
         dp.Output(model_tha['session-tracer'], 'data'),
@@ -96,22 +103,33 @@ def tha_build_callbacks(app):
         dp.Output(model_tha['session-actions'], 'data'),
         dp.Input(id_tha_button_random, 'n_clicks'),
         dp.Input(id_tha_button_step, 'n_clicks'),
+        dp.Input(id_tha_modal_generate, 'n_clicks'),
+        dp.State(id_tha_modal_init_slider, 'value'),
         dp.State(id_tha_slider_steps, 'value'))
-    def callback(n1, n2, steps):
+    def callback(n1, n2, n3, init, steps):
         ctx = dash.callback_context
         if not ctx.triggered: return []
         source = ctx.triggered[0]['prop_id'].split('.')[0]
-        args = {'steps': steps}
-        if source == id_tha_button_random:
-            return [(model_tha['id'], action_tha_random, args)]
-        elif source == id_tha_button_step:
-            return [(model_tha['id'], action_tha_step, args)]
-        print(f'THW callback: Could not find property with source: {source}')
+        args = {'steps': steps, 'init': init}
+        ac = {
+            id_tha_button_random: action_tha_random,
+            id_tha_button_step: action_tha_step,
+            id_tha_modal_generate: action_tha_init,
+        }
+        if source in ac:
+            return [(model_tha['id'], ac[source], args)]
+        print(f'THA callback: Could not find property with source: {source}')
         raise PreventUpdate()
 
 def tha_build(model_id):
     return html.Div(
         html.Div([
+                build_init_modal(
+                    id_tha_modal, id_tha_modal_init_slider,
+                    id_tha_modal_generate, model_tha['name'],
+                    -1, 1, 1, 0
+                ),
+                build_init_button(id_tha_modal),
                 html.Div([html.Button('Random', id=id_tha_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_tha_button_step, style=designs.but)], style=designs.col),
                 html.Div([build_step_slider(
@@ -138,7 +156,7 @@ model_tha = {
     'id': 'threshold_automata',
     'name': 'Threshold Automata',
     'ui': lambda: tha_build(model_tha['id']),
-    'type': 'd',
+    'type': 'u',
     'weighted': False,
     'key': 'tha',
     'actions': tha_build_actions(),
@@ -146,7 +164,7 @@ model_tha = {
     'update': tha_tracer,
     'session-actions': 'session-actions-tha',
     'session-tracer': 'session-tracer-tha',
-    'visual_default': visual_connections['id'],
+    'visual_default': tracer_tha_state['id'],
     'visuals': { model['id']: model for model in [
         visual_connections, tracer_tha_state
     ]},

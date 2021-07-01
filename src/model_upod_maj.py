@@ -11,11 +11,12 @@ import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.exceptions import PreventUpdate
 
+from src.interaction import *
 from src.tracer import generate_trace
-from src.models import DiscreteState, stochastic_callback
+from src.models import DiscreteState, init_value
 import src.designs as designs
 
-from src.visual import build_visual_selector, build_step_callback, build_step_slider
+from src.visual import *
 from src.visual_connections import visual_connections
 
 id_upodmaj_button_random = 'upodmaj-button-random'
@@ -26,11 +27,15 @@ id_upodmaj_slider_threshold = 'upodmaj-slider-threshold'
 id_upodmaj_threshold_id = 'upodmaj-slider-threshold-val'
 id_upodmaj_slider_steps = 'upodmaj-slider-steps'
 id_upodmaj_slider_steps_value = 'upodmaj-slider-steps-value'
+id_upodmaj_modal = 'upodmaj-init'
+id_upodmaj_modal_generate = 'upodmaj-init-generate'
+id_upodmaj_modal_init_slider = 'upodmaj-init-slider'
 
 action_upodmaj_random = 'action_upodmaj_random'
 action_upodmaj_stochastic = 'action_upodmaj_stochastic'
 action_upodmaj_step = 'action_upodmaj_step'
 action_upodmaj_visual = 'action_upodmaj_visual'
+action_upodmaj_init = 'action_upodmaj_init'
 
 def upodmaj_update(data, args):
     graph = data['graph']
@@ -62,10 +67,12 @@ def upodmaj_build_actions():
     return {
         action_upodmaj_random: upodmaj_random, 
         action_upodmaj_step: upodmaj_update,
+        action_upodmaj_init: lambda data, args: init_value(data, args, model_upodmaj['key']),
     }
 
 def upodmaj_build_callbacks(app):
     build_step_callback(app, id_upodmaj_slider_steps_value, id_upodmaj_slider_steps, 'Steps')
+    build_init_callback(app, id_upodmaj_modal, id_upodmaj_modal_init_slider, 'UPOD Maj')
 
     @app.callback(
         dp.Output(model_upodmaj['session-tracer'], 'data'),
@@ -83,23 +90,34 @@ def upodmaj_build_callbacks(app):
         dp.Output(model_upodmaj['session-actions'], 'data'),
         dp.Input(id_upodmaj_button_random, 'n_clicks'),
         dp.Input(id_upodmaj_button_step, 'n_clicks'),
+        dp.Input(id_upodmaj_modal_generate, 'n_clicks'),
+        dp.State(id_upodmaj_modal_init_slider, 'value'),
         dp.State(id_upodmaj_slider_threshold, 'value'),
         dp.State(id_upodmaj_slider_steps, 'value'))
-    def callback(n1, n2, states, steps):
+    def callback(n1, n2, n3, init, states, steps):
         ctx = dash.callback_context
         if not ctx.triggered: return []
         source = ctx.triggered[0]['prop_id'].split('.')[0]
-        args = {'states': states, 'steps': steps}
-        if source == id_upodmaj_button_random:
-            return [(model_upodmaj['id'], action_upodmaj_random, args)]
-        elif source == id_upodmaj_button_step:
-            return [(model_upodmaj['id'], action_upodmaj_step, args)]
+        args = {'states': states, 'steps': steps, 'init': init}
+        ac = {
+            id_upodmaj_button_random: action_upodmaj_random,
+            id_upodmaj_button_step: action_upodmaj_step,
+            id_upodmaj_modal_generate: action_upodmaj_init,
+        }
+        if source in ac:
+            return [(model_upodmaj['id'], ac[source], args)]
         print(f'UPODMAJ callback: Could not find property with source: {source}')
         raise PreventUpdate()
 
 def upodmaj_build(model_id):
     return html.Div(
         html.Div([
+                build_init_modal(
+                    id_upodmaj_modal, id_upodmaj_modal_init_slider,
+                    id_upodmaj_modal_generate, model_upodmaj['name'],
+                    0, 10, 1, 0
+                ),
+                build_init_button(id_upodmaj_modal),
                 html.Div([html.Button('Random', id=id_upodmaj_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_upodmaj_button_step, style=designs.but)], style=designs.col),
                 html.Div([build_step_slider(
@@ -127,7 +145,8 @@ def upodmaj_build(model_id):
 
 def upodmaj_state_tracer(graph, node_x, node_y, node_ids):
     """ Generates the uniform threshold tracer """
-    return generate_trace(graph, node_x, node_y, node_ids, model_upodmaj['key'], 'UPOD Majority State', 'Bluered')
+    return generate_trace(graph, node_x, node_y, node_ids,
+        model_upodmaj['key'], model_upodmaj['name'], 'Bluered')
 
 tracer_upodmaj = {
     'id': 'tracer_upodmaj',
@@ -147,7 +166,7 @@ model_upodmaj = {
     'update': tracer_upodmaj,
     'session-actions': 'session-actions-upodmaj',
     'session-tracer': 'session-tracer-upodmaj',
-    'visual_default': visual_connections['id'],
+    'visual_default': tracer_upodmaj['id'],
     'visuals': { model['id']: model for model in [
         visual_connections, tracer_upodmaj
     ]},

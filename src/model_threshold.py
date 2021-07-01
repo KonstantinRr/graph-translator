@@ -1,6 +1,4 @@
 
-
-from networkx.readwrite.json_graph import adjacency
 import numpy as np
 import networkx as nx
 
@@ -11,11 +9,12 @@ import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.exceptions import PreventUpdate
 
+from src.interaction import *
 from src.tracer import generate_trace
-from src.models import DiscreteState
+from src.models import DiscreteState, init_value
 import src.designs as designs
 
-from src.visual import build_visual_selector, build_step_slider, build_step_callback
+from src.visual import *
 from src.visual_connections import visual_connections
 
 id_thu_button_random = 'thu-button-random'
@@ -25,10 +24,14 @@ id_thu_slider_threshold = 'thu-slider-threshold'
 id_thu_threshold_id = 'thu-slider-threshold-val'
 id_thu_slider_steps = 'thu-slider-steps'
 id_thu_slider_steps_value = 'thu-slider-steps-value'
+id_thu_modal = 'thu-init'
+id_thu_modal_generate = 'thu-init-generate'
+id_thu_modal_init_slider = 'thu-init-slider'
 
 action_thu_random = 'action_thu_random'
 action_thu_step = 'action_thu_step'
 action_thu_visual = 'action_thu_visual'
+action_thu_init = 'action_thu_init'
 
 def thu_update(data, args):
     threshold = args['threshold']
@@ -60,10 +63,12 @@ def thu_build_actions():
     return {
         action_thu_random: thu_random, 
         action_thu_step: thu_update,
+        action_thu_init: lambda data, args: init_value(data, args, model_thu['key']), 
     }
 
 def threshold_uniform_build_callbacks(app):
     build_step_callback(app, id_thu_slider_steps_value, id_thu_slider_steps, 'Steps')
+    build_init_callback(app, id_thu_modal, id_thu_modal_init_slider, 'Threshold')
 
     @app.callback(
         dp.Output(model_thu['session-tracer'], 'data'),
@@ -81,28 +86,38 @@ def threshold_uniform_build_callbacks(app):
         dp.Output(model_thu['session-actions'], 'data'),
         dp.Input(id_thu_button_random, 'n_clicks'),
         dp.Input(id_thu_button_step, 'n_clicks'),
+        dp.Input(id_thu_modal_generate, 'n_clicks'),
+        dp.State(id_thu_modal_init_slider, 'value'),
         dp.State(id_thu_slider_threshold, 'value'),
         dp.State(id_thu_slider_steps, 'value'))
-    def callback(n1, n2, threshold, steps):
+    def callback(n1, n2, n3, init, threshold, steps):
         ctx = dash.callback_context
         if not ctx.triggered: return []
         source = ctx.triggered[0]['prop_id'].split('.')[0]
-        args = {'threshold': threshold, 'steps': steps}
-        if source == id_thu_button_random:
-            return [(model_thu['id'], action_thu_random, args)]
-        elif source == id_thu_button_step:
-            return [(model_thu['id'], action_thu_step, args)]
+        args = {'threshold': threshold, 'steps': steps, 'init': init}
+        ac = {
+            id_thu_button_random: action_thu_random,
+            id_thu_button_step: action_thu_step,
+            id_thu_modal_generate: action_thu_init,
+        }
+        if source in ac:
+            return [(model_thu['id'], ac[source], args)]
         print(f'THW callback: Could not find property with source: {source}')
         raise PreventUpdate()
 
 def threshold_uniform_build(model_id):
     return html.Div(
         html.Div([
+                build_init_modal(
+                    id_thu_modal, id_thu_modal_init_slider,
+                    id_thu_modal_generate, model_thu['name'],
+                    0, 1, 1, 0
+                ),
+                build_init_button(id_thu_modal),
                 html.Div([html.Button('Random', id=id_thu_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_thu_button_step, style=designs.but)], style=designs.col),
                 html.Div([build_step_slider(
                     id_thu_slider_steps_value, id_thu_slider_steps, 'Steps')], style=designs.col),
-                
                 html.Div(
                     html.Div(
                         [
@@ -126,7 +141,8 @@ def threshold_uniform_build(model_id):
 
 def threshold_uniform_tracer(graph, node_x, node_y, node_ids):
     """ Generates the uniform threshold tracer """
-    return generate_trace(graph, node_x, node_y, node_ids, 'thu', 'Uniform Threshold', 'Bluered')
+    return generate_trace(graph, node_x, node_y, node_ids,
+        model_thu['key'], model_thu['name'], 'Bluered')
 
 visual_thu = {
     'id': 'tracer_thu',
@@ -136,7 +152,7 @@ visual_thu = {
 
 model_thu = {
     'id': 'threshold_uniform',
-    'name': 'Threshold',
+    'name': 'Uniform Threshold',
     'gen': threshold_uniform_tracer,
     'ui': lambda: threshold_uniform_build(model_thu['id']),
     'type': 'u',
@@ -147,7 +163,7 @@ model_thu = {
     'update': thu_update,
     'session-actions': 'session-actions-thu',
     'session-tracer': 'session-tracer-thu',
-    'visual_default': visual_connections['id'],
+    'visual_default': visual_thu['id'],
     'visuals': { model['id']: model for model in [
         visual_connections, visual_thu
     ]},

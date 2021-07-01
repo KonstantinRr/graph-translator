@@ -1,7 +1,6 @@
 import random
 
 import numpy as np
-import networkx as nx
 
 import dash
 import dash.dependencies as dp
@@ -10,12 +9,12 @@ import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.exceptions import PreventUpdate
 
+from src.interaction import *
 from src.tracer import generate_trace
-from src.models import DiscreteState
+from src.models import init_value
 import src.designs as designs
 
-from src.visual import (build_visual_selector, build_step_slider, build_step_callback,
-    build_prob_callback, build_prob_slider, build_infection_slider, build_infection_callback)
+from src.visual import *
 from src.visual_connections import visual_connections
 
 
@@ -30,11 +29,15 @@ id_sir_slider_prob = 'sir-slider-prob'
 id_sir_slider_prob_value = 'sir-slider-prob-value'
 id_sir_slider_itime = 'sir-slider-itime'
 id_sir_slider_itime_value = 'sir-slider-itime-value'
+id_sir_modal = 'sir-init'
+id_sir_modal_generate = 'sir-init-generate'
+id_sir_modal_init_slider = 'sir-init-slider'
 
 action_sir_one = 'action_sis_one'
 action_sir_random = 'action_sir_random'
 action_sir_step = 'action_sir_step'
 action_sir_visual = 'action_sir_visual'
+action_sir_init = 'action_sir_init'
 
 
 def sir_update(data, args):
@@ -82,12 +85,14 @@ def sir_build_actions():
         action_sir_random: sir_random, 
         action_sir_step: sir_update,
         action_sir_one: sir_one,
+        action_sir_init: lambda data, args: init_value(data, args, model_sir['key']),
     }
 
 def sir_build_callbacks(app):
     build_step_callback(app, id_sir_slider_steps_value, id_sir_slider_steps, 'Steps')
     build_prob_callback(app, id_sir_slider_prob_value, id_sir_slider_prob)
     build_infection_callback(app, id_sir_slider_itime_value, id_sir_slider_itime)
+    build_init_callback(app, id_sir_modal, id_sir_modal_init_slider, model_sir['name'])
 
     @app.callback(
         dp.Output(model_sir['session-tracer'], 'data'),
@@ -100,26 +105,37 @@ def sir_build_callbacks(app):
         dp.Input(id_sir_button_random, 'n_clicks'),
         dp.Input(id_sir_button_step, 'n_clicks'),
         dp.Input(id_sir_button_one, 'n_clicks'),
+        dp.Input(id_sir_modal_generate, 'n_clicks'),
+        dp.State(id_sir_modal_init_slider, 'value'),
         dp.State(id_sir_slider_steps, 'value'),
         dp.State(id_sir_slider_prob, 'value'),
         dp.State(id_sir_slider_itime, 'value'),)
-    def callback(n1, n2, n3, steps, prob, itime):
+    def callback(n1, n2, n3, n4, init, steps, prob, itime):
         ctx = dash.callback_context
         if not ctx.triggered: return []
         source = ctx.triggered[0]['prop_id'].split('.')[0]
-        args = {'steps': steps, 'prob': prob, 'itime': itime}
-        if source == id_sir_button_random:
-            return [(model_sir['id'], action_sir_random, args)]
-        elif source == id_sir_button_step:
-            return [(model_sir['id'], action_sir_step, args)]
-        elif source == id_sir_button_one:
-            return [(model_sir['id'], action_sir_one, args)]
+        args = {'steps': steps, 'prob': prob, 'itime': itime, 'init': init}
+
+        ac = {
+            id_sir_button_random: action_sir_random,
+            id_sir_button_step: action_sir_step,
+            id_sir_button_one: action_sir_one,
+            id_sir_modal_generate: action_sir_init
+        }
+        if source in ac:
+            return [(model_sir['id'], ac[source], args)]
         print(f'SIR callback: Could not find property with source: {source}')
         raise PreventUpdate()
 
 def sir_build(model_id):
     return html.Div(
         html.Div([
+                build_init_modal(
+                    id_sir_modal, id_sir_modal_init_slider,
+                    id_sir_modal_generate, model_sir['name'],
+                    -1, 100, 1, 0
+                ),
+                build_init_button(id_sir_modal),
                 html.Div([html.Button('Random', id=id_sir_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_sir_button_step, style=designs.but)], style=designs.col),
                 html.Div([html.Button('One', id=id_sir_button_one, style=designs.but)], style=designs.col),
@@ -139,7 +155,8 @@ def sir_build(model_id):
 
 def sir_tracer(graph, node_x, node_y, node_ids):
     """ Generates the SIS tracer """
-    return generate_trace(graph, node_x, node_y, node_ids, 'sir', 'SIR', 'Bluered')
+    return generate_trace(graph, node_x, node_y, node_ids,
+        model_sir['key'], model_sir['name'], 'Bluered')
 
 visual_sir = {
     'id': 'tracer_sir',
@@ -160,7 +177,7 @@ model_sir = {
     'update': sir_update,
     'session-actions': 'session-actions-sir',
     'session-tracer': 'session-tracer-sir',
-    'visual_default': visual_connections['id'],
+    'visual_default': visual_sir['id'],
     'visuals': { model['id']: model for model in [
         visual_connections, visual_sir
     ]},

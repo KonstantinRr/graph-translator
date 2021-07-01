@@ -11,11 +11,12 @@ import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.exceptions import PreventUpdate
 
+from src.interaction import *
 from src.tracer import generate_trace
-from src.models import DiscreteState, stochastic_callback, addMinRequirements
+from src.models import DiscreteState, stochastic_callback, addMinRequirements, init_value
 import src.designs as designs
 
-from src.visual import build_visual_selector, build_step_slider, build_step_callback
+from src.visual import *
 from src.visual_connections import visual_connections
 
 id_thw_button_random = 'thw-button-random'
@@ -26,12 +27,16 @@ id_thw_button_convert = 'thw-button-convert'
 id_thw_dropdown = 'thw-dropdown'
 id_thw_slider_steps = 'thw-slider-steps'
 id_thw_slider_steps_value = 'thw-slider-steps-value'
+id_thw_modal = 'thw-init'
+id_thw_modal_generate = 'thw-init-generate'
+id_thw_modal_init_slider = 'thw-init-slider'
 
 action_thw_random = 'action_thw_random'
 action_thw_stochastic = 'action_thw_stochastic'
 action_thw_step = 'action_thw_step'
 action_thw_convert = 'action_thw_step'
 action_thw_visual = 'action_thw_visual'
+action_thw_init = 'action_thw_init'
 
 def thw_update(data, args):
     graph = data['graph']
@@ -121,10 +126,12 @@ def thw_build_actions():
         action_thw_step: thw_update,
         action_thw_stochastic: stochastic_callback,
         action_thw_convert: thw_convert,
+        action_thw_init: lambda data, args: init_value(data, args, model_thw['key']),
     }
 
 def thw_build_callbacks(app):
     build_step_callback(app, id_thw_slider_steps_value, id_thw_slider_steps, 'Steps')
+    build_init_callback(app, id_thw_modal, id_thw_modal_init_slider, 'Threshold Weighted')
 
     @app.callback(
         dp.Output(model_thw['session-tracer'], 'data'),
@@ -138,26 +145,35 @@ def thw_build_callbacks(app):
         dp.Input(id_thw_button_stochastic, 'n_clicks'),
         dp.Input(id_thw_button_step, 'n_clicks'),
         dp.Input(id_thw_button_convert, 'n_clicks'),
+        dp.Input(id_thw_modal_generate, 'n_clicks'),
+        dp.State(id_thw_modal_init_slider, 'value'),
         dp.State(id_thw_slider_steps, 'value'))
-    def callback(n1, n2, n3, n4, steps):
+    def callback(n1, n2, n3, n4, n5, init, steps):
         ctx = dash.callback_context
         if not ctx.triggered: return []
         source = ctx.triggered[0]['prop_id'].split('.')[0]
-        args = {'steps': steps}
-        if source == id_thw_button_random:
-            return [(model_thw['id'], action_thw_random, args)]
-        elif source == id_thw_button_stochastic:
-            return [(model_thw['id'], action_thw_stochastic, args)]
-        elif source == id_thw_button_step:
-            return [(model_thw['id'], action_thw_step, args)]
-        elif source == id_thw_button_convert:
-            return [(model_thw['id'], action_thw_convert, args)]
+        args = {'steps': steps, 'init': init}
+        ac = {
+            id_thw_button_random: action_thw_random,
+            id_thw_button_stochastic: action_thw_stochastic,
+            id_thw_button_step: action_thw_step,
+            id_thw_button_convert: action_thw_convert,
+            id_thw_modal_generate: action_thw_init,
+        }
+        if source in ac:
+            return [(model_thw['id'], ac[source], args)]
         print(f'THW callback: Could not find property with source: {source}')
         raise PreventUpdate()
 
 def threshold_weighted_build(model_id):
     return html.Div(
         html.Div([
+                build_init_modal(
+                    id_thw_modal, id_thw_modal_init_slider,
+                    id_thw_modal_generate, model_thw['name'],
+                    0, 1, 1, 0
+                ),
+                build_init_button(id_thw_modal),
                 html.Div([html.Button('Random', id=id_thw_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Stochastic', id=id_thw_button_stochastic, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_thw_button_step, style=designs.but)], style=designs.col),
@@ -172,9 +188,10 @@ def threshold_weighted_build(model_id):
         style={'display': 'none'}
     )
 
-def threshold_weighted_tracer(graph, node_x, node_y):
+def threshold_weighted_tracer(graph, node_x, node_y, node_ids):
     """ Generates the uniform threshold tracer """
-    return generate_trace(graph, node_x, node_y, 'thw', 'Weighted Threshold', 'Bluered')
+    return generate_trace(graph, node_x, node_y, node_ids,
+        model_thw['key'], model_thw['name'], 'Bluered')
 
 tracer_weighted_threshold = {
     'id': 'tracer_threshold',
@@ -195,7 +212,7 @@ model_thw = {
     'id': 'threshold_weighted',
     'name': 'Weighted Threshold',
     'ui': lambda: threshold_weighted_build(model_thw['id']),
-    'type': 'd',
+    'type': 'u',
     'weighted': True,
     'key': 'thw',
     'actions': thw_build_actions(),
@@ -203,7 +220,7 @@ model_thw = {
     'update': threshold_weighted_tracer,
     'session-actions': 'session-actions-thw',
     'session-tracer': 'session-tracer-thw',
-    'visual_default': visual_connections['id'],
+    'visual_default': tracer_weighted_threshold['id'],
     'visuals': { model['id']: model for model in [
         visual_connections, tracer_weighted_threshold, tracer_thw_th
     ]},

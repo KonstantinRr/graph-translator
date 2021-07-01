@@ -5,8 +5,8 @@
 import random
 
 import networkx as nx
-from networkx.readwrite.json_graph import adjacency
-import numpy as np
+
+from src.interaction import *
 
 __author__ = "Created by Konstantin Rolf | University of Groningen"
 __copyright__ = "Copyright 2021, Konstantin Rolf"
@@ -47,6 +47,12 @@ def updateLayout(graph, layoutAlgorithm, layouts):
             graph.nodes[node]['layout'] = pos
     else:
         print('UNKNOWN LAYOUT ALGORITHM')
+
+def init_value(data, args, key):
+    graph = data['graph']
+    for node in get_node_names(args['selected']):
+        graph.nodes[node][key] = args['init']
+    return data
 
 
 def addMinRequirements(graph):

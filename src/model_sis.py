@@ -11,12 +11,12 @@ import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.exceptions import PreventUpdate
 
+from src.interaction import *
 from src.tracer import generate_trace
-from src.models import DiscreteState
+from src.models import init_value
 import src.designs as designs
 
-from src.visual import (build_infection_callback, build_infection_slider, build_visual_selector, build_step_callback, build_step_slider,
-    build_prob_slider, build_prob_callback)
+from src.visual import *
 from src.visual_connections import visual_connections
 
 id_sis_button_random = 'sis-button-random'
@@ -30,11 +30,15 @@ id_sis_slider_prob = 'sis-slider-prob'
 id_sis_slider_prob_value = 'sis-slider-prob-value'
 id_sis_slider_itime = 'sis-slider-itime'
 id_sis_slider_itime_value = 'sis-slider-itime-value'
+id_sis_modal = 'sis-init'
+id_sis_modal_generate = 'sis-init-generate'
+id_sis_modal_init_slider = 'sis-init-slider'
 
 action_sis_one = 'action_sis_one'
 action_sis_random = 'action_sis_random'
 action_sis_step = 'action_sis_step'
 action_sis_visual = 'action_sis_visual'
+action_sis_init = 'action_sis_init'
 
 def sis_update(data, args):
     graph = data['graph']
@@ -60,6 +64,7 @@ def sis_update(data, args):
         for key, value in update_dict.items():
             graph.nodes[key][sir_key] = value
     return data
+
 def sis_random(data, args):
     for node, data_node in data['graph'].nodes(data=True):
         data_node[model_sis['key']] = random.choice([0, args['itime']])
@@ -70,18 +75,19 @@ def sis_one(data, args):
     rand[model_sis['key']] = args['itime']
     return data
 
-
 def sis_build_actions():
     return {
         action_sis_random: sis_random,
         action_sis_step: sis_update,
         action_sis_one: sis_one,
+        action_sis_init: lambda data, args: init_value(data, args, model_sis['key']),
     }
 
 def sis_build_callbacks(app):
     build_step_callback(app, id_sis_slider_steps_value, id_sis_slider_steps, 'Steps')
     build_prob_callback(app, id_sis_slider_prob_value, id_sis_slider_prob)
     build_infection_callback(app, id_sis_slider_itime_value, id_sis_slider_itime)
+    build_init_callback(app, id_sis_modal, id_sis_modal_init_slider, 'SIS')
 
     @app.callback(
         dp.Output(model_sis['session-tracer'], 'data'),
@@ -94,20 +100,24 @@ def sis_build_callbacks(app):
         dp.Input(id_sis_button_random, 'n_clicks'),
         dp.Input(id_sis_button_step, 'n_clicks'),
         dp.Input(id_sis_button_one, 'n_clicks'),
+        dp.Input(id_sis_modal_generate, 'n_clicks'),
+        dp.State(id_sis_modal_init_slider, 'value'),
         dp.State(id_sis_slider_steps, 'value'),
         dp.State(id_sis_slider_prob, 'value'),
         dp.State(id_sis_slider_itime, 'value'),)
-    def callback(n1, n2, n3, steps, prob, itime):
+    def callback(n1, n2, n3, n4, init, steps, prob, itime):
         ctx = dash.callback_context
         if not ctx.triggered: return []
         source = ctx.triggered[0]['prop_id'].split('.')[0]
-        args = {'steps': steps, 'prob': prob, 'itime': itime}
-        if source == id_sis_button_random:
-            return [(model_sis['id'], action_sis_random, args)]
-        elif source == id_sis_button_step:
-            return [(model_sis['id'], action_sis_step, args)]
-        elif source == id_sis_button_one:
-            return [(model_sis['id'], action_sis_one, args)]
+        args = {'steps': steps, 'prob': prob, 'itime': itime, 'init': init}
+        ac = {
+            id_sis_button_random: action_sis_random,
+            id_sis_button_step: action_sis_step,
+            id_sis_button_one: action_sis_one,
+            id_sis_modal_generate: action_sis_init,
+        }
+        if source in ac:
+            return [(model_sis['id'], ac[source], args)]
         print(f'SIS callback: Could not find property with source: {source}')
         raise PreventUpdate()
 
@@ -115,6 +125,12 @@ def sis_build_callbacks(app):
 def sis_build(model_id):
     return html.Div(
         html.Div([
+                build_init_modal(
+                    id_sis_modal, id_sis_modal_init_slider,
+                    id_sis_modal_generate, model_sis['name'],
+                    0, 100, 1, 0
+                ),
+                build_init_button(id_sis_modal),
                 html.Div([html.Button('Random', id=id_sis_button_random, style=designs.but)], style=designs.col),
                 html.Div([html.Button('Step', id=id_sis_button_step, style=designs.but)], style=designs.col),
                 html.Div([html.Button('One', id=id_sis_button_one, style=designs.but)], style=designs.col),
@@ -155,7 +171,7 @@ model_sis = {
     'update': sis_update,
     'session-actions': 'session-actions-sis',
     'session-tracer': 'session-tracer-sis',
-    'visual_default': visual_connections['id'],
+    'visual_default': visual_sis['id'],
     'visuals': { model['id']: model for model in [
         visual_connections, visual_sis
     ]},
